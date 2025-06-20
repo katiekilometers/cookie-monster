@@ -499,16 +499,12 @@ class CookiePopupDetector {
     }
     
     highlightPopup(element) {
-      const originalBorder = element.style.border;
-      const originalBoxShadow = element.style.boxShadow;
-      
-      element.style.border = '3px solid #ff4444';
-      element.style.boxShadow = '0 0 15px rgba(255, 68, 68, 0.6)';
-      
-      setTimeout(() => {
-        element.style.border = originalBorder;
-        element.style.boxShadow = originalBoxShadow;
-      }, 4000);
+      // Add a persistent glowy box effect around the detected cookie popup element
+      element.style.border = '3px solid #7f9cf5';
+      element.style.boxShadow = '0 0 32px 8px #7f9cf5cc, 0 0 0 2px #232946';
+      element.style.background = 'linear-gradient(135deg, rgba(44,62,80,0.85) 0%, rgba(95,75,182,0.85) 100%)';
+      element.style.backdropFilter = 'blur(8px)';
+      element.style.zIndex = '2147483647';
     }
   
     showDetectionNotification(popupData) {
