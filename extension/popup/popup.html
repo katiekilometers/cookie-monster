@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 350px;
+      padding: 15px;
+      font-family: Arial, sans-serif;
+    }
+    
+    .header {
+      background: #4285f4;
+      color: white;
+      padding: 10px;
+      margin: -15px -15px 15px -15px;
+      text-align: center;
+    }
+    
+    .stats {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+    }
+    
+    .popup-item {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      font-size: 12px;
+    }
+    
+    .popup-domain {
+      font-weight: bold;
+      color: #4285f4;
+    }
+    
+    .popup-text {
+      margin-top: 5px;
+      color: #666;
+      max-height: 60px;
+      overflow: hidden;
+    }
+    
+    .popup-time {
+      font-size: 10px;
+      color: #999;
+      margin-top: 5px;
+    }
+    
+    .controls {
+      text-align: center;
+      margin-top: 15px;
+    }
+    
+    button {
+      background: #4285f4;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    
+    button:hover {
+      background: #3367d6;
+    }
+    
+    .clear-btn {
+      background: #db4437;
+    }
+    
+    .clear-btn:hover {
+      background: #c23321;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h3>Cookie Popup Analyzer</h3>
+  </div>
+  
+  <div class="stats">
+    <div>Total Popups Detected: <span id="totalCount">0</span></div>
+    <div>Unique Domains: <span id="domainCount">0</span></div>
+  </div>
+  
+  <div id="popupsList"></div>
+  
+  <div class="controls">
+    <button id="refreshBtn">Refresh</button>
+    <button id="clearBtn" class="clear-btn">Clear All</button>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -30,6 +30,12 @@ cookie-monster/
 
 
 
+# Running
+
+npm run dev
+
+
+
 # prompts
 -- 1
 Task: Help implement a hackathon coding project.
