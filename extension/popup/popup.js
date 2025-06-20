@@ -1,8 +1,14 @@
 document.addEventListener('DOMContentLoaded', async () => {
     await loadPopupData();
-    
-    document.getElementById('refreshBtn').addEventListener('click', loadPopupData);
+    showDomainAnalysis();
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+      loadPopupData();
+      showDomainAnalysis();
+    });
     document.getElementById('clearBtn').addEventListener('click', clearData);
+
+    // Auto-refresh analysis after 3 seconds (in case LLM is slow)
+    setTimeout(showDomainAnalysis, 3000);
   });
   
   async function loadPopupData() {
@@ -47,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       // Add analysis if available
       const analysisHtml = popup.analysis_text
-        ? `<div class="popup-analysis"><strong>Plain Language:</strong> ${popup.analysis_text}</div>`
+        ? formatAnalysis(popup.analysis_text)
         : '';
       
       item.innerHTML = `
@@ -70,4 +76,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error clearing data:', error);
       }
     }
+  }
+
+  function getDomainFromUrl(url) {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return '';
+    }
+  }
+
+  async function showDomainAnalysis() {
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+      if (!tabs.length) return;
+      const url = tabs[0].url;
+      const domain = getDomainFromUrl(url);
+      if (!domain) return;
+
+      const analysisDiv = document.getElementById('domainAnalysis');
+      analysisDiv.innerHTML = '<div style="color:#888;">Loading privacy analysis...</div>';
+
+      try {
+        const response = await fetch(`http://localhost:3000/api/cookie-banners/domain/${domain}`);
+        const data = await response.json();
+        if (data.success && data.banners.length > 0) {
+          const banner = data.banners[0];
+          if (banner.analysis_text) {
+            const analysisHtml = formatAnalysis(banner.analysis_text);
+            analysisDiv.innerHTML = analysisHtml;
+          } else {
+            analysisDiv.innerHTML = '<div style="color:#888;">No analysis available for this site yet.</div>';
+          }
+        } else {
+          analysisDiv.innerHTML = '<div style="color:#888;">No analysis available for this site yet.</div>';
+        }
+      } catch (err) {
+        analysisDiv.innerHTML = '<div style="color:#db4437;">Error loading analysis.</div>';
+      }
+    });
+  }
+
+  function formatAnalysis(analysisText) {
+    if (!analysisText) return '';
+    let parsed = null;
+    try {
+      parsed = JSON.parse(analysisText);
+    } catch {
+      // fallback: show as plain text if not valid JSON
+      return `
+        <div class="popup-analysis">
+          <strong>Privacy Analysis:</strong>
+          <pre style="white-space: pre-wrap; font-size: 13px;">${analysisText}</pre>
+        </div>
+      `;
+    }
+    return `
+      <div class="popup-analysis">
+        <strong>Privacy Analysis:</strong>
+        <ul>
+          <li><strong>Clear Opt-Out:</strong> ${parsed.clear_opt_out || 'N/A'}</li>
+          <li><strong>Tracking Enabled:</strong> ${parsed.tracking_enabled || 'N/A'}</li>
+          <li><strong>Dark Patterns:</strong> ${parsed.dark_patterns || 'N/A'}</li>
+          <li><strong>Privacy Grade:</strong> ${parsed.privacy_grade || 'N/A'}</li>
+        </ul>
+      </div>
+    `;
   }
