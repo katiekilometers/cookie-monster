@@ -4,6 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const helmet = require('helmet');
 const path = require('path');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,9 +19,12 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const dbPath = path.join(__dirname, 'cookie_banners.db');
 const db = new sqlite3.Database(dbPath);
 
-// Create tables if they don't exist
+// Create tables if they don't exist (resetting for new schema)
 db.serialize(() => {
   // Main cookie banners table
+  db.run(`
+    DROP TABLE IF EXISTS cookie_banners;
+  `);
   db.run(`
     CREATE TABLE IF NOT EXISTS cookie_banners (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,11 +40,15 @@ db.serialize(() => {
       selector TEXT,
       classes TEXT,
       element_id TEXT,
+      analysis_text TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
   // Buttons table
+  db.run(`
+    DROP TABLE IF EXISTS banner_buttons;
+  `);
   db.run(`
     CREATE TABLE IF NOT EXISTS banner_buttons (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +64,9 @@ db.serialize(() => {
 
   // Policy links table
   db.run(`
+    DROP TABLE IF EXISTS policy_links;
+  `);
+  db.run(`
     CREATE TABLE IF NOT EXISTS policy_links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       banner_id TEXT,
@@ -65,28 +76,67 @@ db.serialize(() => {
     )
   `);
 
-  console.log('✅ Database tables initialized');
+  console.log('✅ Database tables initialized (reset)');
 });
 
-// API Routes
+// Anthropic API integration
+async function getAnalysisFromAnthropic(text) {
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'content-type': 'application/json',
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 256,
+        messages: [
+          {
+            role: 'user',
+            content: `You are a privacy assistant. Given this popup text, answer:\n1. Does it provide clear opt-out choices?\n2. Is it using dark patterns?\n3. Is tracking enabled by default?\n4. How privacy-friendly is it? (Grade A-F)\n\nPopup text:\n${text}`
+          }
+        ]
+      })
+    });
+    const data = await response.json();
+    console.log('Anthropic API response:', data);
+
+    if (data.error) {
+      console.error('Anthropic API returned error:', data.error);
+      return '';
+    }
+    if (!data?.content || !Array.isArray(data.content) || !data.content[0]?.text) {
+      console.warn('Unexpected Anthropic API response structure:', data);
+      return '';
+    }
+    return data.content[0].text;
+  } catch (err) {
+    console.error('Anthropic API error:', err);
+    return '';
+  }
+}
 
 // Store cookie banner data
-app.post('/api/cookie-banners', (req, res) => {
+app.post('/api/cookie-banners', async (req, res) => {
   const bannerData = req.body;
-  
-  console.log('📥 Received cookie banner data:', {
-    domain: bannerData.domain,
-    bannerId: bannerData.id,
-    method: bannerData.detectionMethod
-  });
 
-  // Insert main banner data
+  // Get plain language analysis from Anthropic
+  let analysisText = '';
+  try {
+    analysisText = await getAnalysisFromAnthropic(bannerData.textContent || '');
+  } catch (e) {
+    analysisText = '';
+  }
+
+  // Insert main banner data, now including analysisText
   const insertBanner = `
     INSERT OR REPLACE INTO cookie_banners (
       banner_id, url, domain, detection_method, text_content, 
       html_content, position_data, styling_data, selector, 
-      classes, element_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      classes, element_id, analysis_text
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.run(insertBanner, [
@@ -100,7 +150,8 @@ app.post('/api/cookie-banners', (req, res) => {
     JSON.stringify(bannerData.styling),
     bannerData.selector,
     bannerData.classes,
-    bannerData.elementId
+    bannerData.elementId,
+    analysisText
   ], function(err) {
     if (err) {
       console.error('❌ Error inserting banner:', err);
@@ -110,7 +161,6 @@ app.post('/api/cookie-banners', (req, res) => {
     // Insert buttons
     if (bannerData.buttons && bannerData.buttons.length > 0) {
       const insertButton = `INSERT INTO banner_buttons (banner_id, button_text, button_type, button_classes, button_id, button_href) VALUES (?, ?, ?, ?, ?, ?)`;
-      
       bannerData.buttons.forEach(button => {
         db.run(insertButton, [
           bannerData.id,
@@ -126,7 +176,6 @@ app.post('/api/cookie-banners', (req, res) => {
     // Insert policy links
     if (bannerData.policyLinks && bannerData.policyLinks.length > 0) {
       const insertLink = `INSERT INTO policy_links (banner_id, link_text, link_href) VALUES (?, ?, ?)`;
-      
       bannerData.policyLinks.forEach(link => {
         db.run(insertLink, [
           bannerData.id,

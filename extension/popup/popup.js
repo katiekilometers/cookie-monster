@@ -45,9 +45,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         ? popup.textContent.substring(0, 150) + '...'
         : popup.textContent;
       
+      // Add analysis if available
+      const analysisHtml = popup.analysis_text
+        ? `<div class="popup-analysis"><strong>Plain Language:</strong> ${popup.analysis_text}</div>`
+        : '';
+      
       item.innerHTML = `
         <div class="popup-domain">${popup.domain}</div>
         <div class="popup-text">${truncatedText}</div>
+        ${analysisHtml}
         <div class="popup-time">${new Date(popup.timestamp).toLocaleString()}</div>
       `;
       
