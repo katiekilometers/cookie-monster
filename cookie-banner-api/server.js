@@ -91,11 +91,11 @@ async function getAnalysisFromAnthropic(text) {
       },
       body: JSON.stringify({
         model: 'claude-3-haiku-20240307',
-        max_tokens: 256,
+        max_tokens: 512,
         messages: [
           {
             role: 'user',
-            content: `You are a privacy assistant. Given this popup text, answer:\n1. Does it provide clear opt-out choices?\n2. Is it using dark patterns?\n3. Is tracking enabled by default?\n4. How privacy-friendly is it? (Grade A-F)\n\nPopup text:\n${text}`
+            content: `You are a privacy assistant. Given this popup text, analyze it and return a JSON object with the following fields:\n{\n  "clear_opt_out": "yes/no + short explanation",\n  "tracking_enabled": "yes/no + short explanation",\n  "dark_patterns": "yes/no + short explanation",\n  "privacy_grade": "A-F + short explanation"\n}\nPopup text:\n${text}`
           }
         ]
       })
