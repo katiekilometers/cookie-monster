@@ -13,9 +13,14 @@
     ],
     "content_scripts": [
       {
-        "matches": ["<all_urls>"],
+        "matches": [
+          "http://localhost:8000/*",
+          "http://localhost:8081/*",
+          "http://127.0.0.1:8000/*",
+          "http://127.0.0.1:8081/*"
+        ],
         "js": ["content.js"],
-        "run_at": "document_end"
+        "run_at": "document_idle"
       }
     ],
     "background": {

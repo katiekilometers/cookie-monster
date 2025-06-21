@@ -25,6 +25,7 @@
         <div class="header-actions">
           <button id="refreshBtn" class="refresh-btn">🔄 Refresh Data</button>
           <button id="exportBtn" class="export-btn">📊 Export Report</button>
+          <div id="statusIndicator" style="color: #10b981; font-size: 0.9rem; margin-left: 1rem;">Ready</div>
         </div>
       </div>
     </header>
@@ -56,6 +57,28 @@
             <div class="stat-label">Avg Privacy Score</div>
           </div>
         </div>
+        
+        <!-- Partner Stats -->
+        <div class="partner-stats">
+          <h3>🤝 Partner Analysis</h3>
+          <div class="stats-grid" id="partnerStats">
+            <div class="stat-card">
+              <div class="stat-icon">🤝</div>
+              <div class="stat-value">0</div>
+              <div class="stat-label">Sites with Partners</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">📊</div>
+              <div class="stat-value">0</div>
+              <div class="stat-label">Total Partners</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">📈</div>
+              <div class="stat-value">0</div>
+              <div class="stat-label">Avg Partners/Site</div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- Charts Section -->
@@ -82,6 +105,35 @@
             <h3>Privacy Grade Breakdown</h3>
             <div id="privacyGrades" class="grade-breakdown"></div>
           </div>
+        </div>
+      </section>
+
+      <!-- Privacy Analysis Section -->
+      <section class="privacy-analysis-section">
+        <h2>🔒 Comprehensive Privacy Analysis</h2>
+        <div class="privacy-analysis-grid">
+          <div class="privacy-analytics-card">
+            <h3>Privacy Scores Overview</h3>
+            <div id="privacyScoresOverview" class="privacy-scores-grid"></div>
+          </div>
+          <div class="privacy-analytics-card">
+            <h3>Data Collection Analysis</h3>
+            <div id="dataCollectionAnalysis" class="data-analysis-grid"></div>
+          </div>
+          <div class="privacy-analytics-card">
+            <h3>Data Sharing Patterns</h3>
+            <div id="dataSharingAnalysis" class="data-analysis-grid"></div>
+          </div>
+          <div class="privacy-analytics-card">
+            <h3>User Rights Assessment</h3>
+            <div id="userRightsAnalysis" class="data-analysis-grid"></div>
+          </div>
+        </div>
+        
+        <!-- Privacy Analysis List -->
+        <div class="privacy-analysis-list">
+          <h3>Recent Privacy Policy Analyses</h3>
+          <div id="privacyAnalysisList" class="analysis-list"></div>
         </div>
       </section>
 

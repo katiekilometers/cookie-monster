@@ -9,6 +9,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Auto-refresh analysis after 3 seconds (in case LLM is slow)
     setTimeout(showDomainAnalysis, 3000);
+    
+    // Listen for privacy analysis completion messages
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.type === 'PRIVACY_ANALYSIS_COMPLETE') {
+        console.log('🔒 Privacy analysis completed:', message.data);
+        showPrivacyAnalysisResults(message.data);
+      }
+    });
   });
   
   async function loadPopupData() {
@@ -282,3 +290,374 @@ document.addEventListener('DOMContentLoaded', async () => {
       glassBg.addEventListener('mousemove', updateGradients);
     }
   });
+
+  function displayBannerData(bannerData) {
+    const bannerContainer = document.getElementById('bannerData');
+    
+    if (!bannerData) {
+      bannerContainer.innerHTML = '<p class="no-data">No banner detected on this page</p>';
+      return;
+    }
+
+    const analysis = parseAnalysis(bannerData.analysis?.banner);
+    const privacyAnalysis = parseAnalysis(bannerData.analysis?.privacyPolicy);
+    
+    bannerContainer.innerHTML = `
+      <div class="banner-info">
+        <h3>🎯 Cookie Banner Detected</h3>
+        <p><strong>Domain:</strong> ${bannerData.domain}</p>
+        <p><strong>Method:</strong> ${bannerData.detectionMethod}</p>
+        <p><strong>Time:</strong> ${new Date(bannerData.timestamp).toLocaleTimeString()}</p>
+      </div>
+
+      ${analysis ? `
+        <div class="analysis-section">
+          <h4>📊 Banner Analysis</h4>
+          <div class="grade-badge ${analysis.privacy_grade?.toLowerCase()}">
+            Grade: ${analysis.privacy_grade || 'N/A'}
+          </div>
+          <div class="analysis-details">
+            <p><strong>Opt-Out:</strong> ${analysis.clear_opt_out || 'N/A'}</p>
+            <p><strong>Tracking:</strong> ${analysis.tracking_enabled || 'N/A'}</p>
+            <p><strong>Dark Patterns:</strong> ${analysis.dark_patterns || 'N/A'}</p>
+            <p><strong>Consent:</strong> ${analysis.consent_mechanism || 'N/A'}</p>
+            <p><strong>Language:</strong> ${analysis.language_clarity || 'N/A'}</p>
+          </div>
+        </div>
+      ` : '<p class="no-analysis">Analysis in progress...</p>'}
+
+      ${privacyAnalysis ? `
+        <div class="analysis-section">
+          <h4>🔒 Privacy Policy Analysis</h4>
+          <div class="grade-badge ${privacyAnalysis.overall_score?.toLowerCase()}">
+            Overall: ${privacyAnalysis.overall_score || 'N/A'}
+          </div>
+          <div class="analysis-details">
+            <p><strong>Data Collection:</strong> ${privacyAnalysis.data_collection || 'N/A'}</p>
+            <p><strong>Data Sharing:</strong> ${privacyAnalysis.data_sharing || 'N/A'}</p>
+            <p><strong>User Rights:</strong> ${privacyAnalysis.user_rights || 'N/A'}</p>
+            <p><strong>Compliance:</strong> ${privacyAnalysis.compliance || 'N/A'}</p>
+          </div>
+          
+          ${privacyAnalysis.red_flags && privacyAnalysis.red_flags.length > 0 ? `
+            <div class="flags-section red-flags">
+              <h5>⚠️ Red Flags</h5>
+              <ul>
+                ${privacyAnalysis.red_flags.map(flag => `<li>${flag}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+          
+          ${privacyAnalysis.green_flags && privacyAnalysis.green_flags.length > 0 ? `
+            <div class="flags-section green-flags">
+              <h5>✅ Green Flags</h5>
+              <ul>
+                ${privacyAnalysis.green_flags.map(flag => `<li>${flag}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
+
+      ${bannerData.privacyLinks && bannerData.privacyLinks.length > 0 ? `
+        <div class="links-section">
+          <h4>🔗 Privacy Policy Links</h4>
+          ${bannerData.privacyLinks.map(link => `
+            <div class="policy-link">
+              <a href="${link.href}" target="_blank" class="link-button">
+                ${link.text} (${link.type})
+              </a>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+
+      <div class="banner-content">
+        <h4>📝 Banner Content</h4>
+        <div class="content-preview">
+          ${bannerData.textContent ? bannerData.textContent.substring(0, 200) + (bannerData.textContent.length > 200 ? '...' : '') : 'No content available'}
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="viewDetails" class="action-button">
+          📊 View Full Analysis
+        </button>
+        <button id="openDashboard" class="action-button">
+          📈 Open Dashboard
+        </button>
+      </div>
+    `;
+
+    // Add event listeners
+    document.getElementById('viewDetails')?.addEventListener('click', () => {
+      showDetailedAnalysis(bannerData);
+    });
+
+    document.getElementById('openDashboard')?.addEventListener('click', () => {
+      chrome.tabs.create({ url: 'http://localhost:3001' });
+    });
+  }
+
+  function showDetailedAnalysis(bannerData) {
+    const analysis = parseAnalysis(bannerData.analysis?.banner);
+    const privacyAnalysis = parseAnalysis(bannerData.analysis?.privacyPolicy);
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Detailed Analysis: ${bannerData.domain}</h3>
+          <button class="close-button">&times;</button>
+        </div>
+        <div class="modal-body">
+          ${analysis ? `
+            <div class="analysis-section">
+              <h4>Cookie Banner Analysis</h4>
+              <div class="grade-badge ${analysis.privacy_grade?.toLowerCase()}">
+                Grade: ${analysis.privacy_grade || 'N/A'}
+              </div>
+              <div class="analysis-details">
+                <p><strong>Clear Opt-Out:</strong> ${analysis.clear_opt_out || 'N/A'}</p>
+                <p><strong>Tracking Enabled:</strong> ${analysis.tracking_enabled || 'N/A'}</p>
+                <p><strong>Dark Patterns:</strong> ${analysis.dark_patterns || 'N/A'}</p>
+                <p><strong>Consent Mechanism:</strong> ${analysis.consent_mechanism || 'N/A'}</p>
+                <p><strong>Language Clarity:</strong> ${analysis.language_clarity || 'N/A'}</p>
+                <p><strong>Button Analysis:</strong> ${analysis.button_analysis || 'N/A'}</p>
+              </div>
+              
+              ${analysis.key_concerns && analysis.key_concerns.length > 0 ? `
+                <div class="concerns-section">
+                  <h5>Key Concerns</h5>
+                  <ul>
+                    ${analysis.key_concerns.map(concern => `<li>${concern}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+              
+              ${analysis.recommendations && analysis.recommendations.length > 0 ? `
+                <div class="recommendations-section">
+                  <h5>Recommendations</h5>
+                  <ul>
+                    ${analysis.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+            </div>
+          ` : '<p>No banner analysis available.</p>'}
+
+          ${privacyAnalysis ? `
+            <div class="analysis-section">
+              <h4>Privacy Policy Analysis</h4>
+              <div class="grade-badge ${privacyAnalysis.overall_score?.toLowerCase()}">
+                Overall Score: ${privacyAnalysis.overall_score || 'N/A'}
+              </div>
+              <div class="analysis-details">
+                <p><strong>Data Collection:</strong> ${privacyAnalysis.data_collection || 'N/A'}</p>
+                <p><strong>Data Sharing:</strong> ${privacyAnalysis.data_sharing || 'N/A'}</p>
+                <p><strong>User Rights:</strong> ${privacyAnalysis.user_rights || 'N/A'}</p>
+                <p><strong>Retention:</strong> ${privacyAnalysis.retention || 'N/A'}</p>
+                <p><strong>Third Parties:</strong> ${privacyAnalysis.third_parties || 'N/A'}</p>
+                <p><strong>International Transfers:</strong> ${privacyAnalysis.international_transfers || 'N/A'}</p>
+                <p><strong>Children's Privacy:</strong> ${privacyAnalysis.children_privacy || 'N/A'}</p>
+                <p><strong>Security Measures:</strong> ${privacyAnalysis.security_measures || 'N/A'}</p>
+                <p><strong>Contact Info:</strong> ${privacyAnalysis.contact_info || 'N/A'}</p>
+                <p><strong>Compliance:</strong> ${privacyAnalysis.compliance || 'N/A'}</p>
+              </div>
+              
+              ${privacyAnalysis.summary ? `
+                <div class="summary-section">
+                  <h5>Summary</h5>
+                  <p>${privacyAnalysis.summary}</p>
+                </div>
+              ` : ''}
+            </div>
+          ` : '<p>No privacy policy analysis available.</p>'}
+
+          <div class="banner-content">
+            <h4>Full Banner Content</h4>
+            <div class="content-full">
+              ${bannerData.textContent || 'No content available'}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close modal functionality
+    modal.querySelector('.close-button').addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+  }
+
+  function parseAnalysis(analysisText) {
+    if (!analysisText) return null;
+    try {
+      return JSON.parse(analysisText);
+    } catch (error) {
+      console.error('Error parsing analysis:', error);
+      return null;
+    }
+  }
+
+  function showPrivacyAnalysisResults(analysisData) {
+    const { domain, analysis, policyUrl } = analysisData;
+    
+    // Create or get the privacy analysis container
+    let privacyContainer = document.getElementById('privacyAnalysisContainer');
+    if (!privacyContainer) {
+      privacyContainer = document.createElement('div');
+      privacyContainer.id = 'privacyAnalysisContainer';
+      privacyContainer.style.marginTop = '16px';
+      privacyContainer.style.padding = '16px';
+      privacyContainer.style.background = 'rgba(36,44,80,0.35)';
+      privacyContainer.style.borderRadius = '12px';
+      privacyContainer.style.border = '1px solid rgba(168,85,247,0.2)';
+      
+      // Insert after the popups list
+      const popupsList = document.getElementById('popupsList');
+      popupsList.parentNode.insertBefore(privacyContainer, popupsList.nextSibling);
+    }
+    
+    const { analysis_summary, key_findings } = analysis;
+    
+    // Create privacy analysis HTML
+    const privacyHtml = `
+      <div style="margin-bottom: 16px;">
+        <h3 style="color: #e3e8ff; margin: 0 0 12px 0; font-size: 1.1em; text-align: center;">
+          🔒 Privacy Analysis: ${domain}
+        </h3>
+        
+        <!-- Privacy Scores -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+          <div style="text-align: center; padding: 8px; background: rgba(16,185,129,0.1); border-radius: 8px; border: 1px solid rgba(16,185,129,0.3);">
+            <div style="font-size: 1.2em; font-weight: bold; color: #10b981;">
+              ${analysis_summary.privacy_score}/100
+            </div>
+            <div style="font-size: 0.8em; color: #34d399;">Privacy Score</div>
+          </div>
+          <div style="text-align: center; padding: 8px; background: rgba(59,130,246,0.1); border-radius: 8px; border: 1px solid rgba(59,130,246,0.3);">
+            <div style="font-size: 1.2em; font-weight: bold; color: #3b82f6;">
+              ${analysis_summary.transparency_score}/100
+            </div>
+            <div style="font-size: 0.8em; color: #60a5fa;">Transparency</div>
+          </div>
+          <div style="text-align: center; padding: 8px; background: rgba(168,85,247,0.1); border-radius: 8px; border: 1px solid rgba(168,85,247,0.3);">
+            <div style="font-size: 1.2em; font-weight: bold; color: #a855f7;">
+              ${analysis_summary.user_control_score}/100
+            </div>
+            <div style="font-size: 0.8em; color: #c084fc;">User Control</div>
+          </div>
+        </div>
+        
+        <!-- Risk Level -->
+        <div style="text-align: center; margin-bottom: 16px;">
+          <div style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px; 
+            background: ${getRiskColor(analysis_summary.overall_risk_level).bg}; 
+            color: ${getRiskColor(analysis_summary.overall_risk_level).text}; 
+            border: 1px solid ${getRiskColor(analysis_summary.overall_risk_level).border};">
+            ${analysis_summary.overall_risk_level} Risk
+          </div>
+        </div>
+        
+        <!-- Key Findings -->
+        <div style="margin-bottom: 16px;">
+          <h4 style="color: #e3e8ff; margin: 0 0 8px 0; font-size: 1em;">Key Findings</h4>
+          
+          <!-- Data Collection -->
+          <div style="margin-bottom: 12px;">
+            <div style="font-weight: bold; color: #fbbf24; margin-bottom: 4px;">📊 Data Collection:</div>
+            <div style="font-size: 0.9em; color: #d1d5db; line-height: 1.4;">
+              ${formatDataCollection(key_findings.data_collection)}
+            </div>
+          </div>
+          
+          <!-- Data Sharing -->
+          <div style="margin-bottom: 12px;">
+            <div style="font-weight: bold; color: #f87171; margin-bottom: 4px;">🔄 Data Sharing:</div>
+            <div style="font-size: 0.9em; color: #d1d5db; line-height: 1.4;">
+              ${formatDataSharing(key_findings.data_sharing)}
+            </div>
+          </div>
+          
+          <!-- User Rights -->
+          <div style="margin-bottom: 12px;">
+            <div style="font-weight: bold; color: #34d399; margin-bottom: 4px;">⚖️ User Rights:</div>
+            <div style="font-size: 0.9em; color: #d1d5db; line-height: 1.4;">
+              ${formatUserRights(key_findings.user_rights)}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Policy Link -->
+        <div style="text-align: center;">
+          <a href="${policyUrl}" target="_blank" style="color: #60a5fa; text-decoration: none; font-size: 0.9em;">
+            📄 View Privacy Policy
+          </a>
+        </div>
+      </div>
+    `;
+    
+    privacyContainer.innerHTML = privacyHtml;
+  }
+  
+  function getRiskColor(riskLevel) {
+    switch (riskLevel.toLowerCase()) {
+      case 'low':
+        return { bg: 'rgba(16,185,129,0.1)', text: '#10b981', border: 'rgba(16,185,129,0.3)' };
+      case 'medium':
+        return { bg: 'rgba(245,158,11,0.1)', text: '#f59e0b', border: 'rgba(245,158,11,0.3)' };
+      case 'high':
+        return { bg: 'rgba(239,68,68,0.1)', text: '#ef4444', border: 'rgba(239,68,68,0.3)' };
+      case 'critical':
+        return { bg: 'rgba(220,38,38,0.1)', text: '#dc2626', border: 'rgba(220,38,38,0.3)' };
+      default:
+        return { bg: 'rgba(107,114,128,0.1)', text: '#6b7280', border: 'rgba(107,114,128,0.3)' };
+    }
+  }
+  
+  function formatDataCollection(dataCollection) {
+    const items = [];
+    if (dataCollection.collects_personal_info) items.push('Personal information');
+    if (dataCollection.collects_contact_info) items.push('Contact details');
+    if (dataCollection.collects_financial_info) items.push('Financial data');
+    if (dataCollection.collects_location_data) items.push('Location data');
+    if (dataCollection.collects_device_info) items.push('Device information');
+    if (dataCollection.collects_browsing_history) items.push('Browsing history');
+    if (dataCollection.uses_tracking_pixels) items.push('Tracking pixels');
+    if (dataCollection.uses_fingerprinting) items.push('Device fingerprinting');
+    
+    return items.length > 0 ? items.join(', ') : 'Minimal data collection';
+  }
+  
+  function formatDataSharing(dataSharing) {
+    const items = [];
+    if (dataSharing.shares_with_affiliates) items.push('Affiliates');
+    if (dataSharing.shares_with_partners) items.push('Partners');
+    if (dataSharing.shares_with_advertisers) items.push('Advertisers');
+    if (dataSharing.sells_personal_data) items.push('Sells data');
+    if (dataSharing.transfers_outside_region) items.push('International transfers');
+    
+    return items.length > 0 ? items.join(', ') : 'Limited sharing';
+  }
+  
+  function formatUserRights(userRights) {
+    const rights = [];
+    if (userRights.right_to_access) rights.push('Access');
+    if (userRights.right_to_rectification) rights.push('Correction');
+    if (userRights.right_to_erasure) rights.push('Deletion');
+    if (userRights.right_to_portability) rights.push('Portability');
+    if (userRights.right_to_object) rights.push('Objection');
+    if (userRights.right_to_withdraw_consent) rights.push('Withdraw consent');
+    
+    return rights.length > 0 ? rights.join(', ') : 'Limited rights';
+  }

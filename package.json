@@ -22,5 +22,9 @@
     "api"
   ],
   "author": "Cookie Popup Analyzer Team",
-  "license": "MIT"
-} 
+  "license": "MIT",
+  "dependencies": {
+    "csv-writer": "^1.6.0",
+    "puppeteer": "^24.10.2"
+  }
+}

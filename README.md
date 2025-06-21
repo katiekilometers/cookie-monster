@@ -1,6 +1,8 @@
+> **Disclaimer:** This project is for demonstration and research purposes only. It is intended to be used with fake/test websites, or on sites where you have explicit permission and have agreed to the terms of service for such use. Do not use this tool on real websites without proper authorization.
+
 # 🍪 Cookie Popup Analyzer
 
-A comprehensive Chrome extension that identifies and analyzes cookie banners using AI, with a beautiful web dashboard for data visualization and insights.
+A comprehensive Chrome extension that detects cookie banners on websites, analyzes them using AI for privacy insights and dark pattern detection, and provides detailed privacy policy analysis. The extension includes a modern dashboard for data visualization and aggregated analytics.
 
 ## 🌟 Features
 
@@ -28,6 +30,22 @@ A comprehensive Chrome extension that identifies and analyzes cookie banners usi
 - Responsive design that works on all devices
 - Smooth animations and hover effects
 - Professional, modern interface
+
+### Enhanced Privacy Policy Analysis
+- **Link Detection**: Automatically identifies privacy policy links in cookie banners
+- **Content Extraction**: Fetches and extracts full privacy policy content
+- **Comprehensive Analysis**: Analyzes privacy policies for:
+  - Data collection practices
+  - Data sharing policies
+  - User rights and controls
+  - Data retention policies
+  - Third-party sharing
+  - International data transfers
+  - Children's privacy protection
+  - Security measures
+  - GDPR/CCPA compliance
+  - Red flags and concerning practices
+  - Green flags and good practices
 
 ## 🏗️ Project Structure
 
@@ -147,6 +165,52 @@ The dashboard provides:
 3. **Explore charts** - Interactive privacy score distribution and timeline
 4. **Filter data** - Use domain, grade, and search filters
 5. **Export data** - Download comprehensive reports
+
+## 🔍 Privacy Policy Analysis
+
+### How It Works
+The extension now provides comprehensive privacy policy analysis:
+
+1. **Link Detection**: When a cookie banner is detected, the extension automatically identifies privacy policy links using pattern matching for:
+   - Privacy policy links
+   - Cookie policy links
+   - Terms of service links
+   - GDPR/CCPA information links
+
+2. **Content Extraction**: The extension fetches the full privacy policy content by:
+   - Making HTTP requests to privacy policy URLs
+   - Extracting main content while removing navigation and headers
+   - Processing and cleaning the text for analysis
+   - Limiting content size for API efficiency
+
+3. **AI Analysis**: The extracted privacy policy is analyzed using Claude AI for:
+   - **Overall Score**: A-F rating for the entire policy
+   - **Data Collection**: What types of data are collected
+   - **Data Sharing**: How and with whom data is shared
+   - **User Rights**: What rights users have over their data
+   - **Retention Policies**: How long data is retained
+   - **Third-party Sharing**: Extent of third-party data sharing
+   - **International Transfers**: Cross-border data transfers
+   - **Children's Privacy**: Protection for children's data
+   - **Security Measures**: Security practices described
+   - **Contact Information**: Privacy contact details
+   - **Compliance**: GDPR/CCPA compliance assessment
+   - **Red Flags**: Concerning practices and potential issues
+   - **Green Flags**: Good practices and positive aspects
+   - **Summary**: Brief overview of key findings
+
+### Enhanced Analysis Features
+- **Dual Analysis**: Both cookie banner and privacy policy are analyzed
+- **Comprehensive Coverage**: Covers all major privacy policy aspects
+- **Regulatory Compliance**: Checks for GDPR, CCPA, and other privacy laws
+- **Risk Assessment**: Identifies potential privacy risks and concerns
+- **Best Practices**: Highlights good privacy practices and transparency
+
+### Privacy Policy Content Storage
+- **Full Content**: Complete privacy policy text is stored in the database
+- **Content Preview**: Dashboard shows preview of extracted content
+- **Link Preservation**: Original privacy policy links are preserved
+- **Categorization**: Links are categorized by type (privacy, cookie, terms, etc.)
 
 ## 🔧 Development
 
