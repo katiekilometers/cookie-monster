@@ -1,258 +1,478 @@
 document.addEventListener('DOMContentLoaded', async () => {
     await loadPopupData();
-    showDomainAnalysis();
-    document.getElementById('refreshBtn').addEventListener('click', () => {
-      loadPopupData();
-      showDomainAnalysis();
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+      await loadPopupData();
     });
     document.getElementById('clearBtn').addEventListener('click', clearData);
-
-    // Auto-refresh analysis after 3 seconds (in case LLM is slow)
-    setTimeout(showDomainAnalysis, 3000);
     
-    // Listen for privacy analysis completion messages
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (message.type === 'PRIVACY_ANALYSIS_COMPLETE') {
-        console.log('🔒 Privacy analysis completed:', message.data);
-        showPrivacyAnalysisResults(message.data);
+    // Add listener for tab changes to update popup data
+    chrome.tabs.onActivated.addListener(async () => {
+      await loadPopupData();
+    });
+    
+    // Add listener for tab updates (when URL changes)
+    chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+      if (changeInfo.status === 'complete' && tab.active) {
+        await loadPopupData();
+      }
+    });
+    
+    // Add listener for popup focus to refresh data
+    window.addEventListener('focus', async () => {
+      await loadPopupData();
+    });
+    
+    // Listen for storage changes (when content script detects new banners)
+    chrome.storage.onChanged.addListener(async (changes, namespace) => {
+      if (namespace === 'local' && changes.cookiePopups) {
+        console.log('Storage changed - new cookie banner detected');
+        await loadPopupData();
+      }
+    });
+    
+    // Listen for messages from content script
+    chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+      if (message.type === 'POPUP_DETECTED') {
+        console.log('New popup detected from content script');
+        await loadPopupData();
       }
     });
   });
   
   async function loadPopupData() {
     try {
+      console.log('🔄 Loading popup data...');
       const result = await chrome.storage.local.get(['cookiePopups']);
       const popups = result.cookiePopups || [];
       
-      displayStats(popups);
-      displayPopups(popups);
-    } catch (error) {
-      console.error('Error loading popup data:', error);
-    }
-  }
-  
-  function displayStats(popups) {
-    const totalCount = popups.length;
-    const uniqueDomains = new Set(popups.map(p => p.domain)).size;
-    
-    document.getElementById('totalCount').textContent = totalCount;
-    document.getElementById('domainCount').textContent = uniqueDomains;
-  }
-  
-  function displayPopups(popups) {
-    const container = document.getElementById('popupsList');
-    container.innerHTML = '';
-    
-    // Add heading at the top
-    const heading = document.createElement('div');
-    heading.textContent = 'Websites Looking to Track Your Data';
-    heading.style.fontWeight = '700';
-    heading.style.fontSize = '1.08em';
-    heading.style.margin = '18px 0 12px 0';
-    heading.style.letterSpacing = '0.2px';
-    heading.style.color = '#e3e8ff';
-    heading.style.textAlign = 'center';
-    container.appendChild(heading);
-
-    if (popups.length === 0) {
-      container.innerHTML += '<div style="text-align: center; color: #666;">No popups detected yet</div>';
-      return;
-    }
-    
-    // Show most recent first
-    const sortedPopups = popups.slice().sort((a, b) => b.timestamp - a.timestamp);
-
-    // Table setup
-    const tableWrapper = document.createElement('div');
-    tableWrapper.style.maxHeight = '168px'; // About 3 rows
-    tableWrapper.style.overflowY = 'auto';
-    tableWrapper.style.borderRadius = '12px';
-    tableWrapper.style.background = 'rgba(36,44,80,0.35)';
-    tableWrapper.style.boxShadow = '0 1px 6px #23294622';
-    tableWrapper.style.margin = '0 0 10px 0';
-
-    const table = document.createElement('table');
-    table.style.width = '100%';
-    table.style.borderCollapse = 'collapse';
-    table.style.fontSize = '1em';
-
-    // Table header
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-    ['Domain', 'Date'].forEach(text => {
-      const th = document.createElement('th');
-      th.textContent = text;
-      th.style.textAlign = 'left';
-      th.style.padding = '8px 12px';
-      th.style.color = '#e3e8ff';
-      th.style.fontWeight = '600';
-      th.style.background = 'rgba(36,44,80,0.12)';
-      th.style.position = 'sticky';
-      th.style.top = '0';
-      headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-
-    // Table body
-    const tbody = document.createElement('tbody');
-    sortedPopups.forEach((popup, idx) => {
-      const row = document.createElement('tr');
-      // Only show top 3, but allow scrolling for more
-      row.style.display = idx < 3 ? '' : '';
-      row.style.transition = 'background-color 0.2s ease';
-      row.style.cursor = 'default';
+      console.log(`📊 Found ${popups.length} stored popups`);
       
-      // Add hover effect
-      row.addEventListener('mouseenter', function() {
-        row.style.backgroundColor = 'rgba(168,85,247,0.15)';
-      });
-      row.addEventListener('mouseleave', function() {
-        row.style.backgroundColor = 'transparent';
-      });
+      await displayStats(popups);
+      await displayPrivacyPolicy();
       
-      // Domain cell
-      const domainCell = document.createElement('td');
-      domainCell.textContent = popup.domain;
-      domainCell.className = 'popup-domain';
-      domainCell.style.cursor = 'pointer';
-      domainCell.style.textDecoration = 'underline';
-      domainCell.style.color = '#10b981';
-      domainCell.style.padding = '8px 12px';
-      domainCell.addEventListener('click', function(e) {
-        e.stopPropagation();
-        showAnalysisModal(popup);
-      });
-      // Date cell
-      const dateCell = document.createElement('td');
-      dateCell.textContent = new Date(popup.timestamp).toLocaleDateString();
-      dateCell.className = 'popup-time';
-      dateCell.style.padding = '8px 12px';
-      dateCell.style.color = '#34d399';
-      row.appendChild(domainCell);
-      row.appendChild(dateCell);
-      tbody.appendChild(row);
-    });
-    table.appendChild(tbody);
-    tableWrapper.appendChild(table);
-    container.appendChild(tableWrapper);
-
-    // Modal container (create if not exists)
-    let modal = document.getElementById('analysisModal');
-    if (!modal) {
-      modal = document.createElement('div');
-      modal.id = 'analysisModal';
-      modal.style.display = 'none';
-      modal.style.position = 'fixed';
-      modal.style.top = '0';
-      modal.style.left = '0';
-      modal.style.width = '100vw';
-      modal.style.height = '100vh';
-      modal.style.background = 'rgba(24,28,43,0.82)';
-      modal.style.zIndex = '9999';
-      modal.style.justifyContent = 'center';
-      modal.style.alignItems = 'center';
-      modal.style.backdropFilter = 'blur(2px)';
-      modal.innerHTML = '<div id="modalContent" style="background:rgba(36,44,80,0.98);border-radius:16px;padding:28px 24px;max-width:340px;box-shadow:0 4px 32px #23294655;color:#f3f6fa;position:relative;"></div>';
-      document.body.appendChild(modal);
-    }
-  }
-  
-  async function clearData() {
-    if (confirm('Are you sure you want to clear all popup data?')) {
-      try {
-        await chrome.storage.local.remove(['cookiePopups']);
-        await loadPopupData();
-      } catch (error) {
-        console.error('Error clearing data:', error);
+      // Add visual feedback that data was refreshed
+      const refreshBtn = document.getElementById('refreshBtn');
+      if (refreshBtn) {
+        refreshBtn.textContent = '✓ Refreshed';
+        setTimeout(() => {
+          refreshBtn.textContent = '🔄 Refresh';
+        }, 1000);
       }
+      
+      console.log('✅ Popup data loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading popup data:', error);
+    }
+  }
+  
+  async function displayStats(popups) {
+    try {
+      // Get current domain for privacy analysis
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const domain = getDomainFromUrl(tab.url);
+      
+      // Get privacy analysis data for current domain
+      const privacyResult = await chrome.storage.local.get([`privacyAnalysis_${domain}`]);
+      const privacyData = privacyResult[`privacyAnalysis_${domain}`];
+      
+      // Update privacy score stat
+      const privacyScoreValue = document.getElementById('privacyScoreValue');
+      if (privacyData && privacyData.scoreData) {
+        privacyScoreValue.textContent = `${privacyData.scoreData.score}/100`;
+        privacyScoreValue.style.color = getGradeColor(privacyData.scoreData.grade);
+      } else {
+        privacyScoreValue.textContent = '-';
+        privacyScoreValue.style.color = '#6b7280';
+      }
+      
+      // Count unique domains with privacy policies
+      const domainsWithPolicies = new Set();
+      for (const popup of popups) {
+        if (popup.privacyLinks && popup.privacyLinks.length > 0) {
+          domainsWithPolicies.add(getDomainFromUrl(popup.url));
+        }
+      }
+      
+      const policyCount = document.getElementById('policyCount');
+      policyCount.textContent = domainsWithPolicies.size;
+      
+    } catch (error) {
+      console.error('Error displaying stats:', error);
+    }
+  }
+  
+  function getGradeColor(grade) {
+    const gradeColors = {
+      'A': '#10b981',
+      'B': '#3b82f6', 
+      'C': '#f59e0b',
+      'D': '#f97316',
+      'E': '#ef4444',
+      'F': '#dc2626'
+    };
+    return gradeColors[grade] || '#6b7280';
+  }
+  
+  async function displayPrivacyPolicy() {
+    try {
+      console.log('🔍 Checking for privacy policy data...');
+      // Get current tab to check for privacy policy links
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tabs.length) return;
+
+      const currentTab = tabs[0];
+      const domain = getDomainFromUrl(currentTab.url);
+      console.log(`🌐 Current domain: ${domain}`);
+      
+      // Check for cached privacy analysis results
+      const cachedResult = await chrome.storage.local.get([`privacyAnalysis_${domain}`]);
+      const cachedData = cachedResult[`privacyAnalysis_${domain}`];
+      
+      // Fetch banner data for current domain
+      const response = await fetch(`http://localhost:3000/api/cookie-banners/domain/${domain}`);
+      const data = await response.json();
+      
+      console.log(`📋 Found ${data.banners?.length || 0} banners for ${domain}`);
+      
+      if (!data.success || !data.banners.length) {
+        // Hide privacy section if no banner data
+        const privacySection = document.getElementById('privacySection');
+        if (privacySection) {
+          privacySection.style.display = 'none';
+        }
+        console.log('❌ No banner data found, hiding privacy section');
+        return;
+      }
+
+      const banner = data.banners[0];
+      const privacyLinks = banner.privacyLinks || [];
+      
+      if (privacyLinks.length === 0) {
+        return;
+      }
+
+      // Show privacy section
+      const privacySection = document.getElementById('privacySection');
+      const privacyHeader = document.getElementById('privacyHeader');
+      privacyHeader.textContent = '🔒 Privacy Policy for Current Site';
+      privacySection.style.display = 'block';
+      
+      // Hide privacy content by default
+      const privacyContent = document.getElementById('privacyContent');
+      privacyContent.style.display = 'none';
+      
+      // Show privacy links section
+      const privacyLinksSection = document.getElementById('privacyLinks');
+      privacyLinksSection.style.display = 'block';
+      
+      // Show privacy score section
+      const privacyScoreSection = document.getElementById('privacyScore');
+      privacyScoreSection.style.display = 'block';
+      
+      // Display privacy links
+      const linksContainer = document.getElementById('linksContainer');
+      linksContainer.innerHTML = '';
+      privacyLinks.forEach(link => {
+        const linkElement = document.createElement('div');
+        linkElement.className = 'policy-link';
+        // Display the text property if available, otherwise use the href
+        linkElement.textContent = link.text || link.href || link;
+        linkElement.onclick = async (e) => {
+          e.preventDefault();
+          await showPrivacyPolicyModal(link.href || link);
+        };
+        linksContainer.appendChild(linkElement);
+      });
+
+      // Handle Claude analysis with caching
+      const claudeSummary = document.getElementById('claudeSummary');
+      claudeSummary.style.display = 'block';
+      const summaryContent = document.getElementById('summaryContent');
+      
+      if (cachedData && cachedData.claudeSummary) {
+        // Use cached Claude summary
+        summaryContent.textContent = cachedData.claudeSummary;
+      } else {
+        // Run new Claude analysis
+        summaryContent.textContent = 'Analyzing...';
+        
+        // Get the first privacy link URL (extract href from the object)
+        const firstPrivacyUrl = privacyLinks[0]?.href || privacyLinks[0];
+        
+        const analyzeRes = await fetch('http://localhost:3000/api/analyze-privacy-policy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: firstPrivacyUrl })
+        });
+        const analyzeData = await analyzeRes.json();
+        
+        if (analyzeData.success && analyzeData.summary) {
+          summaryContent.textContent = analyzeData.summary;
+          
+          // Cache the result
+          await chrome.storage.local.set({
+            [`privacyAnalysis_${domain}`]: {
+              claudeSummary: analyzeData.summary,
+              timestamp: Date.now(),
+              domain: domain
+            }
+          });
+        } else {
+          summaryContent.textContent = 'Failed to analyze privacy policy.';
+        }
+      }
+
+      // Handle privacy scoring with caching
+      const scoreContent = document.getElementById('scoreContent');
+      if (cachedData && cachedData.scoreData) {
+        // Use cached score data
+        displayPrivacyScore(cachedData.scoreData);
+      } else {
+        // Automatically run scoring instead of showing button
+        try {
+          // Get the first privacy link URL
+          const firstPrivacyUrl = privacyLinks[0]?.href || privacyLinks[0];
+          
+          // Show loading state
+          scoreContent.innerHTML = '<div style="text-align: center; color: #cbd5e1; padding: 20px;">Scoring privacy policy...</div>';
+          
+          // Call the scoring API
+          const scoreRes = await fetch('http://localhost:3000/api/score-privacy-policy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: firstPrivacyUrl })
+          });
+          
+          const scoreData = await scoreRes.json();
+          
+          if (scoreData.success) {
+            displayPrivacyScore(scoreData);
+            
+            // Cache the score result
+            const currentCache = await chrome.storage.local.get([`privacyAnalysis_${domain}`]);
+            const updatedCache = {
+              ...currentCache[`privacyAnalysis_${domain}`],
+              scoreData: scoreData,
+              timestamp: Date.now()
+            };
+            await chrome.storage.local.set({
+              [`privacyAnalysis_${domain}`]: updatedCache
+            });
+          } else {
+            // Fallback to button if scoring fails
+            scoreContent.innerHTML = '<button id="scoreBtn" class="score-btn">Score Privacy Policy</button>';
+            
+            // Add scoring button functionality
+            const scoreBtn = document.getElementById('scoreBtn');
+            if (scoreBtn) {
+              scoreBtn.addEventListener('click', async function() {
+                try {
+                  scoreBtn.disabled = true;
+                  scoreBtn.textContent = 'Scoring...';
+                  
+                  const retryRes = await fetch('http://localhost:3000/api/score-privacy-policy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: firstPrivacyUrl })
+                  });
+                  
+                  const retryData = await retryRes.json();
+                  
+                  if (retryData.success) {
+                    displayPrivacyScore(retryData);
+                    
+                    // Cache the score result
+                    const currentCache = await chrome.storage.local.get([`privacyAnalysis_${domain}`]);
+                    const updatedCache = {
+                      ...currentCache[`privacyAnalysis_${domain}`],
+                      scoreData: retryData,
+                      timestamp: Date.now()
+                    };
+                    await chrome.storage.local.set({
+                      [`privacyAnalysis_${domain}`]: updatedCache
+                    });
+                  } else {
+                    scoreContent.innerHTML = '<div style="color: #ef4444;">Failed to score privacy policy.</div>';
+                  }
+                  
+                } catch (error) {
+                  console.error('Error scoring privacy policy:', error);
+                  scoreContent.innerHTML = '<div style="color: #ef4444;">Error scoring privacy policy.</div>';
+                } finally {
+                  scoreBtn.disabled = false;
+                  scoreBtn.textContent = 'Score Privacy Policy';
+                }
+              });
+            }
+          }
+          
+        } catch (error) {
+          console.error('Error automatically scoring privacy policy:', error);
+          // Fallback to button if automatic scoring fails
+          scoreContent.innerHTML = '<button id="scoreBtn" class="score-btn">Score Privacy Policy</button>';
+          
+          // Add scoring button functionality
+          const scoreBtn = document.getElementById('scoreBtn');
+          if (scoreBtn) {
+            scoreBtn.addEventListener('click', async function() {
+              try {
+                const firstPrivacyUrl = privacyLinks[0]?.href || privacyLinks[0];
+                scoreBtn.disabled = true;
+                scoreBtn.textContent = 'Scoring...';
+                
+                const retryRes = await fetch('http://localhost:3000/api/score-privacy-policy', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ url: firstPrivacyUrl })
+                });
+                
+                const retryData = await retryRes.json();
+                
+                if (retryData.success) {
+                  displayPrivacyScore(retryData);
+                  
+                  // Cache the score result
+                  const currentCache = await chrome.storage.local.get([`privacyAnalysis_${domain}`]);
+                  const updatedCache = {
+                    ...currentCache[`privacyAnalysis_${domain}`],
+                    scoreData: retryData,
+                    timestamp: Date.now()
+                  };
+                  await chrome.storage.local.set({
+                    [`privacyAnalysis_${domain}`]: updatedCache
+                  });
+                } else {
+                  scoreContent.innerHTML = '<div style="color: #ef4444;">Failed to score privacy policy.</div>';
+                }
+                
+              } catch (error) {
+                console.error('Error scoring privacy policy:', error);
+                scoreContent.innerHTML = '<div style="color: #ef4444;">Error scoring privacy policy.</div>';
+              } finally {
+                scoreBtn.disabled = false;
+                scoreBtn.textContent = 'Score Privacy Policy';
+              }
+            });
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('Error displaying privacy policy:', error);
+    }
+  }
+
+  async function fetchPrivacyPolicyContent(url) {
+    const contentContainer = document.getElementById('privacyContent');
+    
+    try {
+      // Show loading state
+      contentContainer.innerHTML = '<div class="loading">Loading privacy policy content...</div>';
+      contentContainer.className = 'privacy-content loading';
+
+      // Fetch privacy policy content
+      const response = await fetch(`http://localhost:3000/api/privacy-policy?url=${encodeURIComponent(url)}`);
+      const data = await response.json();
+
+      if (data.success) {
+        // Display the content
+        const content = data.content;
+        const truncatedContent = content.length > 1000 
+          ? content.substring(0, 1000) + '...\n\n[Content truncated - click link above to view full policy]'
+          : content;
+        
+        contentContainer.innerHTML = `<div>${truncatedContent.replace(/\n/g, '<br>')}</div>`;
+        contentContainer.className = 'privacy-content';
+      } else {
+        contentContainer.innerHTML = `<div class="error">Failed to load privacy policy: ${data.error}</div>`;
+        contentContainer.className = 'privacy-content error';
+      }
+
+    } catch (error) {
+      console.error('Error fetching privacy policy content:', error);
+      contentContainer.innerHTML = '<div class="error">Error loading privacy policy content</div>';
+      contentContainer.className = 'privacy-content error';
+    }
+  }
+
+  async function analyzePrivacyPolicy(url) {
+    const summaryContent = document.getElementById('summaryContent');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    
+    try {
+      // Show loading state
+      summaryContent.innerHTML = '<div style="text-align: center; color: #888; font-style: italic;">Analyzing with Claude...</div>';
+      analyzeBtn.disabled = true;
+      analyzeBtn.textContent = 'Analyzing...';
+
+      // Send to API for Claude analysis
+      const response = await fetch('http://localhost:3000/api/analyze-privacy-policy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: url })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Display the Claude summary
+        summaryContent.innerHTML = `<div style="color: #10b981; font-weight: 600;">${data.summary}</div>`;
+      } else {
+        summaryContent.innerHTML = `<div style="color: #ef4444;">Failed to analyze: ${data.error}</div>`;
+      }
+
+    } catch (error) {
+      console.error('Error analyzing privacy policy:', error);
+      summaryContent.innerHTML = '<div style="color: #ef4444;">Error analyzing privacy policy</div>';
+    } finally {
+      // Reset button state
+      analyzeBtn.disabled = false;
+      analyzeBtn.textContent = 'Analyze with Claude';
+    }
+  }
+
+  async function clearData() {
+    try {
+      // Clear local storage
+      await chrome.storage.local.remove(['cookiePopups']);
+      
+      // Clear privacy analysis cache
+      const allKeys = await chrome.storage.local.get(null);
+      const privacyKeys = Object.keys(allKeys).filter(key => key.startsWith('privacyAnalysis_'));
+      if (privacyKeys.length > 0) {
+        await chrome.storage.local.remove(privacyKeys);
+      }
+      
+      // Clear API data
+      await fetch('http://localhost:3000/api/cookie-banners', {
+        method: 'DELETE'
+      });
+      
+      // Reload data
+      await loadPopupData();
+      
+      console.log('Data cleared successfully');
+    } catch (error) {
+      console.error('Error clearing data:', error);
     }
   }
 
   function getDomainFromUrl(url) {
     try {
-      return new URL(url).hostname;
-    } catch {
-      return '';
+      const urlObj = new URL(url);
+      // Include port in domain for localhost to distinguish between test sites
+      const domain = urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1' 
+        ? `${urlObj.hostname}:${urlObj.port}`
+        : urlObj.hostname;
+      return domain;
+    } catch (e) {
+      return url;
     }
   }
 
-  async function showDomainAnalysis() {
-    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-      if (!tabs.length) return;
-      const url = tabs[0].url;
-      const domain = getDomainFromUrl(url);
-      if (!domain) return;
-
-      const analysisDiv = document.getElementById('domainAnalysis');
-      analysisDiv.innerHTML = '<div style="color:#888;">Loading privacy analysis...</div>';
-
-      try {
-        const response = await fetch(`http://localhost:3000/api/cookie-banners/domain/${domain}`);
-        const data = await response.json();
-        if (data.success && data.banners.length > 0) {
-          const banner = data.banners[0];
-          if (banner.analysis_text) {
-            const analysisHtml = formatAnalysis(banner.analysis_text);
-            analysisDiv.innerHTML = analysisHtml;
-          }
-        }
-      } catch (err) {
-        analysisDiv.innerHTML = '<div style="color:#db4437;">Error loading analysis.</div>';
-      }
-    });
-  }
-
-  function formatAnalysis(analysisText) {
-    if (!analysisText) return '';
-    let parsed = null;
-    try {
-      parsed = JSON.parse(analysisText);
-    } catch {
-      // fallback: show as plain text if not valid JSON
-      return `
-        <div class="popup-analysis">
-          <strong>Privacy Analysis:</strong>
-          <pre style="white-space: pre-wrap; font-size: 13px;">${analysisText}</pre>
-        </div>
-      `;
-    }
-    return `
-      <div class="popup-analysis">
-        <strong>Privacy Analysis:</strong>
-        <ul>
-          <li><strong>Clear Opt-Out:</strong> ${parsed.clear_opt_out || 'N/A'}</li>
-          <li><strong>Tracking Enabled:</strong> ${parsed.tracking_enabled || 'N/A'}</li>
-          <li><strong>Dark Patterns:</strong> ${parsed.dark_patterns || 'N/A'}</li>
-          <li><strong>Privacy Grade:</strong> ${parsed.privacy_grade || 'N/A'}</li>
-        </ul>
-      </div>
-    `;
-  }
-
-  // Show analysis modal for a popup
-  function showAnalysisModal(popup) {
-    const modal = document.getElementById('analysisModal');
-    const content = modal.querySelector('#modalContent');
-    let html = `<div style="font-size:1.1em;font-weight:700;margin-bottom:10px;color:#7f9cf5;">${popup.domain}</div>`;
-    if (popup.analysis_text) {
-      html += formatAnalysis(popup.analysis_text);
-    } else {
-      html += '<div style="color:#bfc9e6;">No analysis available for this site.</div>';
-    }
-    html += '<button id="closeModalBtn" style="margin-top:18px;padding:7px 18px;border-radius:12px;background:#7f9cf5;color:#fff;border:none;font-weight:600;cursor:pointer;">Close</button>';
-    content.innerHTML = html;
-    modal.style.display = 'flex';
-    document.getElementById('closeModalBtn').onclick = function() {
-      modal.style.display = 'none';
-    };
-    // Also close modal on click outside content
-    modal.onclick = function(e) {
-      if (e.target === modal) modal.style.display = 'none';
-    };
-  }
-
-  // Animate header gradient based on cursor position (moved from popup.html inline script)
+  // Animate header gradient based on cursor position
   document.addEventListener('DOMContentLoaded', function() {
     const header = document.querySelector('.header');
     const glassBg = document.querySelector('.popup-glass-bg');
@@ -291,373 +511,343 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  function displayBannerData(bannerData) {
-    const bannerContainer = document.getElementById('bannerData');
-    
-    if (!bannerData) {
-      bannerContainer.innerHTML = '<p class="no-data">No banner detected on this page</p>';
-      return;
+  function showPrivacyContent() {
+    const privacyContent = document.getElementById('privacyContent');
+    if (privacyContent) {
+      privacyContent.style.display = 'block';
     }
-
-    const analysis = parseAnalysis(bannerData.analysis?.banner);
-    const privacyAnalysis = parseAnalysis(bannerData.analysis?.privacyPolicy);
-    
-    bannerContainer.innerHTML = `
-      <div class="banner-info">
-        <h3>🎯 Cookie Banner Detected</h3>
-        <p><strong>Domain:</strong> ${bannerData.domain}</p>
-        <p><strong>Method:</strong> ${bannerData.detectionMethod}</p>
-        <p><strong>Time:</strong> ${new Date(bannerData.timestamp).toLocaleTimeString()}</p>
-      </div>
-
-      ${analysis ? `
-        <div class="analysis-section">
-          <h4>📊 Banner Analysis</h4>
-          <div class="grade-badge ${analysis.privacy_grade?.toLowerCase()}">
-            Grade: ${analysis.privacy_grade || 'N/A'}
-          </div>
-          <div class="analysis-details">
-            <p><strong>Opt-Out:</strong> ${analysis.clear_opt_out || 'N/A'}</p>
-            <p><strong>Tracking:</strong> ${analysis.tracking_enabled || 'N/A'}</p>
-            <p><strong>Dark Patterns:</strong> ${analysis.dark_patterns || 'N/A'}</p>
-            <p><strong>Consent:</strong> ${analysis.consent_mechanism || 'N/A'}</p>
-            <p><strong>Language:</strong> ${analysis.language_clarity || 'N/A'}</p>
-          </div>
-        </div>
-      ` : '<p class="no-analysis">Analysis in progress...</p>'}
-
-      ${privacyAnalysis ? `
-        <div class="analysis-section">
-          <h4>🔒 Privacy Policy Analysis</h4>
-          <div class="grade-badge ${privacyAnalysis.overall_score?.toLowerCase()}">
-            Overall: ${privacyAnalysis.overall_score || 'N/A'}
-          </div>
-          <div class="analysis-details">
-            <p><strong>Data Collection:</strong> ${privacyAnalysis.data_collection || 'N/A'}</p>
-            <p><strong>Data Sharing:</strong> ${privacyAnalysis.data_sharing || 'N/A'}</p>
-            <p><strong>User Rights:</strong> ${privacyAnalysis.user_rights || 'N/A'}</p>
-            <p><strong>Compliance:</strong> ${privacyAnalysis.compliance || 'N/A'}</p>
-          </div>
-          
-          ${privacyAnalysis.red_flags && privacyAnalysis.red_flags.length > 0 ? `
-            <div class="flags-section red-flags">
-              <h5>⚠️ Red Flags</h5>
-              <ul>
-                ${privacyAnalysis.red_flags.map(flag => `<li>${flag}</li>`).join('')}
-              </ul>
-            </div>
-          ` : ''}
-          
-          ${privacyAnalysis.green_flags && privacyAnalysis.green_flags.length > 0 ? `
-            <div class="flags-section green-flags">
-              <h5>✅ Green Flags</h5>
-              <ul>
-                ${privacyAnalysis.green_flags.map(flag => `<li>${flag}</li>`).join('')}
-              </ul>
-            </div>
-          ` : ''}
-        </div>
-      ` : ''}
-
-      ${bannerData.privacyLinks && bannerData.privacyLinks.length > 0 ? `
-        <div class="links-section">
-          <h4>🔗 Privacy Policy Links</h4>
-          ${bannerData.privacyLinks.map(link => `
-            <div class="policy-link">
-              <a href="${link.href}" target="_blank" class="link-button">
-                ${link.text} (${link.type})
-              </a>
-            </div>
-          `).join('')}
-        </div>
-      ` : ''}
-
-      <div class="banner-content">
-        <h4>📝 Banner Content</h4>
-        <div class="content-preview">
-          ${bannerData.textContent ? bannerData.textContent.substring(0, 200) + (bannerData.textContent.length > 200 ? '...' : '') : 'No content available'}
-        </div>
-      </div>
-
-      <div class="actions">
-        <button id="viewDetails" class="action-button">
-          📊 View Full Analysis
-        </button>
-        <button id="openDashboard" class="action-button">
-          📈 Open Dashboard
-        </button>
-      </div>
-    `;
-
-    // Add event listeners
-    document.getElementById('viewDetails')?.addEventListener('click', () => {
-      showDetailedAnalysis(bannerData);
-    });
-
-    document.getElementById('openDashboard')?.addEventListener('click', () => {
-      chrome.tabs.create({ url: 'http://localhost:3001' });
-    });
   }
 
-  function showDetailedAnalysis(bannerData) {
-    const analysis = parseAnalysis(bannerData.analysis?.banner);
-    const privacyAnalysis = parseAnalysis(bannerData.analysis?.privacyPolicy);
-    
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Detailed Analysis: ${bannerData.domain}</h3>
-          <button class="close-button">&times;</button>
-        </div>
-        <div class="modal-body">
-          ${analysis ? `
-            <div class="analysis-section">
-              <h4>Cookie Banner Analysis</h4>
-              <div class="grade-badge ${analysis.privacy_grade?.toLowerCase()}">
-                Grade: ${analysis.privacy_grade || 'N/A'}
-              </div>
-              <div class="analysis-details">
-                <p><strong>Clear Opt-Out:</strong> ${analysis.clear_opt_out || 'N/A'}</p>
-                <p><strong>Tracking Enabled:</strong> ${analysis.tracking_enabled || 'N/A'}</p>
-                <p><strong>Dark Patterns:</strong> ${analysis.dark_patterns || 'N/A'}</p>
-                <p><strong>Consent Mechanism:</strong> ${analysis.consent_mechanism || 'N/A'}</p>
-                <p><strong>Language Clarity:</strong> ${analysis.language_clarity || 'N/A'}</p>
-                <p><strong>Button Analysis:</strong> ${analysis.button_analysis || 'N/A'}</p>
-              </div>
-              
-              ${analysis.key_concerns && analysis.key_concerns.length > 0 ? `
-                <div class="concerns-section">
-                  <h5>Key Concerns</h5>
-                  <ul>
-                    ${analysis.key_concerns.map(concern => `<li>${concern}</li>`).join('')}
-                  </ul>
-                </div>
-              ` : ''}
-              
-              ${analysis.recommendations && analysis.recommendations.length > 0 ? `
-                <div class="recommendations-section">
-                  <h5>Recommendations</h5>
-                  <ul>
-                    ${analysis.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                  </ul>
-                </div>
-              ` : ''}
-            </div>
-          ` : '<p>No banner analysis available.</p>'}
-
-          ${privacyAnalysis ? `
-            <div class="analysis-section">
-              <h4>Privacy Policy Analysis</h4>
-              <div class="grade-badge ${privacyAnalysis.overall_score?.toLowerCase()}">
-                Overall Score: ${privacyAnalysis.overall_score || 'N/A'}
-              </div>
-              <div class="analysis-details">
-                <p><strong>Data Collection:</strong> ${privacyAnalysis.data_collection || 'N/A'}</p>
-                <p><strong>Data Sharing:</strong> ${privacyAnalysis.data_sharing || 'N/A'}</p>
-                <p><strong>User Rights:</strong> ${privacyAnalysis.user_rights || 'N/A'}</p>
-                <p><strong>Retention:</strong> ${privacyAnalysis.retention || 'N/A'}</p>
-                <p><strong>Third Parties:</strong> ${privacyAnalysis.third_parties || 'N/A'}</p>
-                <p><strong>International Transfers:</strong> ${privacyAnalysis.international_transfers || 'N/A'}</p>
-                <p><strong>Children's Privacy:</strong> ${privacyAnalysis.children_privacy || 'N/A'}</p>
-                <p><strong>Security Measures:</strong> ${privacyAnalysis.security_measures || 'N/A'}</p>
-                <p><strong>Contact Info:</strong> ${privacyAnalysis.contact_info || 'N/A'}</p>
-                <p><strong>Compliance:</strong> ${privacyAnalysis.compliance || 'N/A'}</p>
-              </div>
-              
-              ${privacyAnalysis.summary ? `
-                <div class="summary-section">
-                  <h5>Summary</h5>
-                  <p>${privacyAnalysis.summary}</p>
-                </div>
-              ` : ''}
-            </div>
-          ` : '<p>No privacy policy analysis available.</p>'}
-
-          <div class="banner-content">
-            <h4>Full Banner Content</h4>
-            <div class="content-full">
-              ${bannerData.textContent || 'No content available'}
-            </div>
+  async function showPrivacyPolicyModal(url) {
+    try {
+      // Show the modal
+      const modal = document.getElementById('privacyModal');
+      const modalContent = document.getElementById('modalContent');
+      modal.style.display = 'block';
+      
+      // Show loading state
+      modalContent.innerHTML = '<div style="text-align: center; padding: 20px;">Loading privacy policy...</div>';
+      
+      // Fetch the privacy policy content
+      const response = await fetch(`http://localhost:3000/api/privacy-policy?url=${encodeURIComponent(url)}`);
+      const data = await response.json();
+      
+      if (data.success && data.content) {
+        // Display the full privacy policy content
+        modalContent.innerHTML = `
+          <div style="white-space: pre-wrap; font-size: 0.9em; line-height: 1.5; color: #bfc9e6;">
+            ${data.content}
           </div>
-        </div>
-      </div>
-    `;
+        `;
+      } else {
+        modalContent.innerHTML = '<div style="text-align: center; padding: 20px; color: #ef4444;">Failed to load privacy policy</div>';
+      }
+    } catch (error) {
+      console.error('Error fetching privacy policy:', error);
+      const modalContent = document.getElementById('modalContent');
+      modalContent.innerHTML = '<div style="text-align: center; padding: 20px; color: #ef4444;">Error loading privacy policy</div>';
+    }
+  }
 
-    document.body.appendChild(modal);
-
-    // Close modal functionality
-    modal.querySelector('.close-button').addEventListener('click', () => {
-      document.body.removeChild(modal);
-    });
-
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        document.body.removeChild(modal);
+  // Add modal close functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('privacyModal');
+    const closeBtn = document.getElementById('closeModal');
+    
+    // Close modal when clicking the X button
+    closeBtn.onclick = function() {
+      modal.style.display = 'none';
+    }
+    
+    // Close modal when clicking outside of it
+    window.onclick = function(event) {
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    }
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape' && modal.style.display === 'block') {
+        modal.style.display = 'none';
       }
     });
-  }
 
-  function parseAnalysis(analysisText) {
-    if (!analysisText) return null;
-    try {
-      return JSON.parse(analysisText);
-    } catch (error) {
-      console.error('Error parsing analysis:', error);
-      return null;
-    }
-  }
+    // Add refresh analysis button functionality
+    const refreshAnalysisBtn = document.getElementById('refreshAnalysisBtn');
+    if (refreshAnalysisBtn) {
+      refreshAnalysisBtn.addEventListener('click', async function() {
+        try {
+          // Get current tab to check for privacy policy links
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+          if (!tabs.length) return;
 
-  function showPrivacyAnalysisResults(analysisData) {
-    const { domain, analysis, policyUrl } = analysisData;
+          const currentTab = tabs[0];
+          const domain = getDomainFromUrl(currentTab.url);
+          
+          // Fetch banner data for current domain
+          const response = await fetch(`http://localhost:3000/api/cookie-banners/domain/${domain}`);
+          const data = await response.json();
+          
+          if (!data.success || !data.banners.length) {
+            return;
+          }
+
+          const banner = data.banners[0];
+          const privacyLinks = banner.privacyLinks || [];
+          
+          if (privacyLinks.length === 0) {
+            return;
+          }
+
+          // Show loading state
+          refreshAnalysisBtn.disabled = true;
+          refreshAnalysisBtn.textContent = '🔄 Refreshing...';
+          
+          const summaryContent = document.getElementById('summaryContent');
+          summaryContent.textContent = 'Analyzing...';
+          
+          // Get the first privacy link URL
+          const firstPrivacyUrl = privacyLinks[0]?.href || privacyLinks[0];
+          
+          // Run new Claude analysis
+          const analyzeRes = await fetch('http://localhost:3000/api/analyze-privacy-policy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: firstPrivacyUrl })
+          });
+          const analyzeData = await analyzeRes.json();
+          
+          if (analyzeData.success && analyzeData.summary) {
+            summaryContent.textContent = analyzeData.summary;
+            
+            // Update cache with new analysis
+            await chrome.storage.local.set({
+              [`privacyAnalysis_${domain}`]: {
+                claudeSummary: analyzeData.summary,
+                timestamp: Date.now(),
+                domain: domain
+              }
+            });
+          } else {
+            summaryContent.textContent = 'Failed to analyze privacy policy.';
+          }
+          
+          // Run new privacy scoring
+          const scoreRes = await fetch('http://localhost:3000/api/score-privacy-policy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: firstPrivacyUrl })
+          });
+          
+          const scoreData = await scoreRes.json();
+          
+          if (scoreData.success) {
+            displayPrivacyScore(scoreData);
+            
+            // Update cache with new score data
+            const currentCache = await chrome.storage.local.get([`privacyAnalysis_${domain}`]);
+            const updatedCache = {
+              ...currentCache[`privacyAnalysis_${domain}`],
+              scoreData: scoreData,
+              timestamp: Date.now()
+            };
+            await chrome.storage.local.set({
+              [`privacyAnalysis_${domain}`]: updatedCache
+            });
+          }
+          
+        } catch (error) {
+          console.error('Error refreshing analysis:', error);
+          const summaryContent = document.getElementById('summaryContent');
+          summaryContent.textContent = 'Error refreshing analysis.';
+        } finally {
+          refreshAnalysisBtn.disabled = false;
+          refreshAnalysisBtn.textContent = '🔄 Refresh Analysis';
+        }
+      });
+    }
+  });
+
+  function displayPrivacyScore(scoreData) {
+    const scoreContent = document.getElementById('scoreContent');
     
-    // Create or get the privacy analysis container
-    let privacyContainer = document.getElementById('privacyAnalysisContainer');
-    if (!privacyContainer) {
-      privacyContainer = document.createElement('div');
-      privacyContainer.id = 'privacyAnalysisContainer';
-      privacyContainer.style.marginTop = '16px';
-      privacyContainer.style.padding = '16px';
-      privacyContainer.style.background = 'rgba(36,44,80,0.35)';
-      privacyContainer.style.borderRadius = '12px';
-      privacyContainer.style.border = '1px solid rgba(168,85,247,0.2)';
-      
-      // Insert after the popups list
-      const popupsList = document.getElementById('popupsList');
-      popupsList.parentNode.insertBefore(privacyContainer, popupsList.nextSibling);
+    if (!scoreContent) {
+      console.error('scoreContent element not found');
+      return;
     }
     
-    const { analysis_summary, key_findings } = analysis;
+    // Clear any loading content first
+    scoreContent.innerHTML = '';
     
-    // Create privacy analysis HTML
-    const privacyHtml = `
-      <div style="margin-bottom: 16px;">
-        <h3 style="color: #e3e8ff; margin: 0 0 12px 0; font-size: 1.1em; text-align: center;">
-          🔒 Privacy Analysis: ${domain}
-        </h3>
-        
-        <!-- Privacy Scores -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;">
-          <div style="text-align: center; padding: 8px; background: rgba(16,185,129,0.1); border-radius: 8px; border: 1px solid rgba(16,185,129,0.3);">
-            <div style="font-size: 1.2em; font-weight: bold; color: #10b981;">
-              ${analysis_summary.privacy_score}/100
-            </div>
-            <div style="font-size: 0.8em; color: #34d399;">Privacy Score</div>
-          </div>
-          <div style="text-align: center; padding: 8px; background: rgba(59,130,246,0.1); border-radius: 8px; border: 1px solid rgba(59,130,246,0.3);">
-            <div style="font-size: 1.2em; font-weight: bold; color: #3b82f6;">
-              ${analysis_summary.transparency_score}/100
-            </div>
-            <div style="font-size: 0.8em; color: #60a5fa;">Transparency</div>
-          </div>
-          <div style="text-align: center; padding: 8px; background: rgba(168,85,247,0.1); border-radius: 8px; border: 1px solid rgba(168,85,247,0.3);">
-            <div style="font-size: 1.2em; font-weight: bold; color: #a855f7;">
-              ${analysis_summary.user_control_score}/100
-            </div>
-            <div style="font-size: 0.8em; color: #c084fc;">User Control</div>
-          </div>
-        </div>
-        
-        <!-- Risk Level -->
-        <div style="text-align: center; margin-bottom: 16px;">
-          <div style="display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px; 
-            background: ${getRiskColor(analysis_summary.overall_risk_level).bg}; 
-            color: ${getRiskColor(analysis_summary.overall_risk_level).text}; 
-            border: 1px solid ${getRiskColor(analysis_summary.overall_risk_level).border};">
-            ${analysis_summary.overall_risk_level} Risk
-          </div>
-        </div>
-        
-        <!-- Key Findings -->
-        <div style="margin-bottom: 16px;">
-          <h4 style="color: #e3e8ff; margin: 0 0 8px 0; font-size: 1em;">Key Findings</h4>
-          
-          <!-- Data Collection -->
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: bold; color: #fbbf24; margin-bottom: 4px;">📊 Data Collection:</div>
-            <div style="font-size: 0.9em; color: #d1d5db; line-height: 1.4;">
-              ${formatDataCollection(key_findings.data_collection)}
-            </div>
-          </div>
-          
-          <!-- Data Sharing -->
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: bold; color: #f87171; margin-bottom: 4px;">🔄 Data Sharing:</div>
-            <div style="font-size: 0.9em; color: #d1d5db; line-height: 1.4;">
-              ${formatDataSharing(key_findings.data_sharing)}
-            </div>
-          </div>
-          
-          <!-- User Rights -->
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: bold; color: #34d399; margin-bottom: 4px;">⚖️ User Rights:</div>
-            <div style="font-size: 0.9em; color: #d1d5db; line-height: 1.4;">
-              ${formatUserRights(key_findings.user_rights)}
-            </div>
-          </div>
-        </div>
-        
-        <!-- Policy Link -->
-        <div style="text-align: center;">
-          <a href="${policyUrl}" target="_blank" style="color: #60a5fa; text-decoration: none; font-size: 0.9em;">
-            📄 View Privacy Policy
-          </a>
-        </div>
-      </div>
+    let scoreGrade = document.getElementById('scoreGrade');
+    let scoreBtn = document.getElementById('scoreBtn');
+    let detailedAnalysisBtn = document.getElementById('detailedAnalysisBtn');
+    
+    const gradeColors = {
+      'A': '#10b981',
+      'B': '#3b82f6', 
+      'C': '#f59e0b',
+      'D': '#f97316',
+      'E': '#ef4444',
+      'F': '#dc2626'
+    };
+    
+    const gradeColor = gradeColors[scoreData.grade] || '#6b7280';
+    
+    // Create scoreGrade element if it doesn't exist
+    if (!scoreGrade) {
+      scoreGrade = document.createElement('div');
+      scoreGrade.id = 'scoreGrade';
+      scoreGrade.className = 'score-grade';
+      scoreContent.appendChild(scoreGrade);
+    }
+    
+    // Show the grade automatically with better styling
+    scoreGrade.style.display = 'block';
+    scoreGrade.className = `score-grade grade-${scoreData.grade.toLowerCase()}`;
+    scoreGrade.style.textAlign = 'center';
+    scoreGrade.style.padding = '12px';
+    scoreGrade.style.marginBottom = '12px';
+    scoreGrade.style.borderRadius = '8px';
+    scoreGrade.style.backgroundColor = `${gradeColor}20`;
+    scoreGrade.style.border = `2px solid ${gradeColor}`;
+    scoreGrade.innerHTML = `
+      <div style="font-size: 1.8em; font-weight: bold; color: ${gradeColor}; margin-bottom: 4px;">Grade ${scoreData.grade}</div>
+      <div style="font-size: 1.2em; color: #e2e8f0;">${scoreData.score}/100 points</div>
     `;
     
-    privacyContainer.innerHTML = privacyHtml;
-  }
-  
-  function getRiskColor(riskLevel) {
-    switch (riskLevel.toLowerCase()) {
-      case 'low':
-        return { bg: 'rgba(16,185,129,0.1)', text: '#10b981', border: 'rgba(16,185,129,0.3)' };
-      case 'medium':
-        return { bg: 'rgba(245,158,11,0.1)', text: '#f59e0b', border: 'rgba(245,158,11,0.3)' };
-      case 'high':
-        return { bg: 'rgba(239,68,68,0.1)', text: '#ef4444', border: 'rgba(239,68,68,0.3)' };
-      case 'critical':
-        return { bg: 'rgba(220,38,38,0.1)', text: '#dc2626', border: 'rgba(220,38,38,0.3)' };
-      default:
-        return { bg: 'rgba(107,114,128,0.1)', text: '#6b7280', border: 'rgba(107,114,128,0.3)' };
+    // Hide the score button if it exists
+    if (scoreBtn) {
+      scoreBtn.style.display = 'none';
     }
-  }
-  
-  function formatDataCollection(dataCollection) {
-    const items = [];
-    if (dataCollection.collects_personal_info) items.push('Personal information');
-    if (dataCollection.collects_contact_info) items.push('Contact details');
-    if (dataCollection.collects_financial_info) items.push('Financial data');
-    if (dataCollection.collects_location_data) items.push('Location data');
-    if (dataCollection.collects_device_info) items.push('Device information');
-    if (dataCollection.collects_browsing_history) items.push('Browsing history');
-    if (dataCollection.uses_tracking_pixels) items.push('Tracking pixels');
-    if (dataCollection.uses_fingerprinting) items.push('Device fingerprinting');
     
-    return items.length > 0 ? items.join(', ') : 'Minimal data collection';
-  }
-  
-  function formatDataSharing(dataSharing) {
-    const items = [];
-    if (dataSharing.shares_with_affiliates) items.push('Affiliates');
-    if (dataSharing.shares_with_partners) items.push('Partners');
-    if (dataSharing.shares_with_advertisers) items.push('Advertisers');
-    if (dataSharing.sells_personal_data) items.push('Sells data');
-    if (dataSharing.transfers_outside_region) items.push('International transfers');
+    // Create detailedAnalysisBtn if it doesn't exist
+    if (!detailedAnalysisBtn) {
+      detailedAnalysisBtn = document.createElement('button');
+      detailedAnalysisBtn.id = 'detailedAnalysisBtn';
+      detailedAnalysisBtn.className = 'detailed-analysis-btn';
+      detailedAnalysisBtn.textContent = '📋 See Detailed Analysis';
+      scoreContent.appendChild(detailedAnalysisBtn);
+    }
     
-    return items.length > 0 ? items.join(', ') : 'Limited sharing';
-  }
-  
-  function formatUserRights(userRights) {
-    const rights = [];
-    if (userRights.right_to_access) rights.push('Access');
-    if (userRights.right_to_rectification) rights.push('Correction');
-    if (userRights.right_to_erasure) rights.push('Deletion');
-    if (userRights.right_to_portability) rights.push('Portability');
-    if (userRights.right_to_object) rights.push('Objection');
-    if (userRights.right_to_withdraw_consent) rights.push('Withdraw consent');
+    // Show detailed analysis button with better styling
+    detailedAnalysisBtn.style.display = 'block';
+    detailedAnalysisBtn.style.marginTop = '8px';
+    detailedAnalysisBtn.style.width = '100%';
+    detailedAnalysisBtn.style.padding = '8px 12px';
+    detailedAnalysisBtn.style.backgroundColor = '#374151';
+    detailedAnalysisBtn.style.color = '#e2e8f0';
+    detailedAnalysisBtn.style.border = '1px solid #4b5563';
+    detailedAnalysisBtn.style.borderRadius = '6px';
+    detailedAnalysisBtn.style.cursor = 'pointer';
+    detailedAnalysisBtn.style.fontSize = '0.85em';
+    detailedAnalysisBtn.style.transition = 'all 0.2s ease';
     
-    return rights.length > 0 ? rights.join(', ') : 'Limited rights';
+    // Add hover effect
+    detailedAnalysisBtn.onmouseenter = function() {
+      this.style.backgroundColor = '#4b5563';
+      this.style.borderColor = '#6b7280';
+    };
+    detailedAnalysisBtn.onmouseleave = function() {
+      this.style.backgroundColor = '#374151';
+      this.style.borderColor = '#4b5563';
+    };
+    
+    let breakdownHtml = '';
+    Object.keys(scoreData.breakdown).forEach(factor => {
+      const score = scoreData.breakdown[factor];
+      const maxScore = getMaxScoreForFactor(factor);
+      const percentage = Math.round((score / maxScore) * 100);
+      const color = percentage >= 70 ? '#10b981' : percentage >= 40 ? '#f59e0b' : '#ef4444';
+      breakdownHtml += `
+        <div class="score-breakdown-item" style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #374151;">
+          <span style="color: #e2e8f0;">${formatFactorName(factor)}</span>
+          <span style="color: ${color}; font-weight: 500;">${score}/${maxScore} (${percentage}%)</span>
+        </div>
+      `;
+    });
+    
+    // Store the full breakdown HTML for later use
+    scoreContent.setAttribute('data-breakdown', breakdownHtml);
+    scoreContent.setAttribute('data-recommendations', JSON.stringify(scoreData.recommendations || []));
+    
+    // Add click handler for detailed analysis button
+    detailedAnalysisBtn.onclick = function() {
+      const breakdown = scoreContent.querySelector('.score-breakdown');
+      const recommendations = scoreContent.querySelector('.recommendations');
+      
+      if (breakdown && breakdown.classList.contains('show')) {
+        // Hide detailed analysis
+        breakdown.classList.remove('show');
+        if (recommendations) recommendations.style.display = 'none';
+        detailedAnalysisBtn.textContent = '📋 See Detailed Analysis';
+      } else {
+        // Show detailed analysis
+        if (!breakdown) {
+          const newBreakdown = document.createElement('div');
+          newBreakdown.className = 'score-breakdown show';
+          newBreakdown.style.marginTop = '12px';
+          newBreakdown.style.padding = '12px';
+          newBreakdown.style.backgroundColor = 'rgba(30, 41, 59, 0.4)';
+          newBreakdown.style.borderRadius = '6px';
+          newBreakdown.style.border = '1px solid #374151';
+          newBreakdown.innerHTML = `
+            <div style="font-weight: 600; color: #e2e8f0; margin-bottom: 8px; font-size: 0.9em;">Score Breakdown:</div>
+            ${breakdownHtml}
+          `;
+          scoreContent.appendChild(newBreakdown);
+          
+          // Add recommendations if they exist
+          const recs = JSON.parse(scoreContent.getAttribute('data-recommendations') || '[]');
+          if (recs.length > 0) {
+            const recsDiv = document.createElement('div');
+            recsDiv.className = 'recommendations';
+            recsDiv.style.marginTop = '12px';
+            recsDiv.style.padding = '12px';
+            recsDiv.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+            recsDiv.style.borderRadius = '6px';
+            recsDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+            recsDiv.style.fontSize = '0.8em';
+            recsDiv.innerHTML = `
+              <strong style="color: #ef4444;">Recommendations for Improvement:</strong>
+              <ul style="margin: 8px 0; padding-left: 16px; color: #cbd5e1;">
+                ${recs.map(rec => `<li style="margin-bottom: 4px;">${rec}</li>`).join('')}
+              </ul>
+            `;
+            scoreContent.appendChild(recsDiv);
+          }
+        } else {
+          breakdown.classList.add('show');
+          if (recommendations) recommendations.style.display = 'block';
+        }
+        detailedAnalysisBtn.textContent = '📋 Hide Detailed Analysis';
+      }
+    };
+  }
+
+  function getMaxScoreForFactor(factor) {
+    const maxScores = {
+      dataCollection: 20,
+      dataSharing: 15,
+      userRights: 15,
+      dataSecurity: 10,
+      clarity: 15,
+      dataRetention: 10,
+      consentMechanisms: 15
+    };
+    return maxScores[factor] || 0;
+  }
+
+  function formatFactorName(factor) {
+    const names = {
+      dataCollection: 'Data Collection',
+      dataSharing: 'Data Sharing',
+      userRights: 'User Rights',
+      dataSecurity: 'Data Security',
+      clarity: 'Clarity',
+      dataRetention: 'Data Retention',
+      consentMechanisms: 'Consent Mechanisms'
+    };
+    return names[factor] || factor;
   }
