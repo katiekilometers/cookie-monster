@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopSmart - Your Privacy Matters</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <h1>🛒 ShopSmart</h1>
+            </div>
+            <div class="nav-menu">
+                <a href="#" class="nav-link">Home</a>
+                <a href="#" class="nav-link">Products</a>
+                <a href="#" class="nav-link">Deals</a>
+                <a href="#" class="nav-link">About</a>
+                <a href="#" class="nav-link">Contact</a>
+            </div>
+            <div class="nav-actions">
+                <button class="btn-secondary">Sign In</button>
+                <button class="btn-primary">Cart (3)</button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h2>Discover Amazing Deals</h2>
+            <p>Shop the latest trends with personalized recommendations just for you</p>
+            <button class="btn-primary btn-large">Shop Now</button>
+        </div>
+        <div class="hero-image">
+            <div class="product-grid">
+                <div class="product-card">
+                    <div class="product-image">📱</div>
+                    <h3>Smartphone Pro</h3>
+                    <p class="price">$899</p>
+                    <button class="btn-secondary">Add to Cart</button>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">💻</div>
+                    <h3>Laptop Ultra</h3>
+                    <p class="price">$1,299</p>
+                    <button class="btn-secondary">Add to Cart</button>
+                </div>
+                <div class="product-card">
+                    <div class="product-image">🎧</div>
+                    <h3>Wireless Headphones</h3>
+                    <p class="price">$199</p>
+                    <button class="btn-secondary">Add to Cart</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <h2>Why Choose ShopSmart?</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🚚</div>
+                <h3>Free Shipping</h3>
+                <p>Free delivery on orders over $50</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h3>Easy Returns</h3>
+                <p>30-day return policy on all items</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Secure Shopping</h3>
+                <p>Your data is protected with us</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Cookie Banner -->
+    <div id="cookie-banner" class="cookie-banner">
+        <div class="cookie-content">
+            <div class="cookie-text">
+                <h3>🍪 We value your privacy</h3>
+                <p>We use cookies and similar technologies to provide you with a personalized shopping experience, analyze our traffic, and show you relevant advertisements. By clicking "Accept All", you consent to our use of cookies for these purposes. You can learn more about how we use your data in our <a href="privacy-policy.html" class="privacy-link">Privacy Policy</a>.</p>
+            </div>
+            <div class="cookie-actions">
+                <button id="reject-cookies" class="btn-secondary">Reject All</button>
+                <button id="manage-cookies" class="btn-secondary">Manage Preferences</button>
+                <button id="accept-cookies" class="btn-primary">Accept All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cookie Preferences Modal -->
+    <div id="cookie-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Cookie Preferences</h3>
+                <button id="close-modal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="cookie-category">
+                    <div class="cookie-category-header">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="essential-cookies" checked disabled>
+                            <span class="checkmark"></span>
+                        </label>
+                        <div>
+                            <h4>Essential Cookies</h4>
+                            <p>Required for the website to function properly. Cannot be disabled.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="cookie-category">
+                    <div class="cookie-category-header">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="analytics-cookies">
+                            <span class="checkmark"></span>
+                        </label>
+                        <div>
+                            <h4>Analytics Cookies</h4>
+                            <p>Help us understand how visitors interact with our website by collecting and reporting information anonymously.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="cookie-category">
+                    <div class="cookie-category-header">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="marketing-cookies">
+                            <span class="checkmark"></span>
+                        </label>
+                        <div>
+                            <h4>Marketing Cookies</h4>
+                            <p>Used to track visitors across websites to display relevant and engaging advertisements.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="cookie-category">
+                    <div class="cookie-category-header">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="preference-cookies">
+                            <span class="checkmark"></span>
+                        </label>
+                        <div>
+                            <h4>Preference Cookies</h4>
+                            <p>Allow the website to remember information that changes the way it behaves or looks.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-preferences" class="btn-primary">Save Preferences</button>
+                <button id="accept-all-modal" class="btn-primary">Accept All</button>
+                <button id="reject-all-modal" class="btn-secondary">Reject All</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

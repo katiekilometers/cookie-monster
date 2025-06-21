@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chattr - Connect with the World</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="header">
+    <div class="logo">💬 Chattr</div>
+    <nav class="nav">
+      <a href="#" class="nav-link">Feed</a>
+      <a href="#" class="nav-link">Explore</a>
+      <a href="#" class="nav-link">Messages</a>
+      <a href="#" class="nav-link">Profile</a>
+    </nav>
+    <button class="btn-primary">Sign Up</button>
+  </header>
+
+  <main class="main-content">
+    <section class="feed">
+      <h2>Trending Now</h2>
+      <div class="post">
+        <div class="avatar">🦄</div>
+        <div class="post-content">
+          <span class="username">@unicornfan</span>
+          <p>Loving the new Chattr update! #social #fun</p>
+        </div>
+      </div>
+      <div class="post">
+        <div class="avatar">🐱</div>
+        <div class="post-content">
+          <span class="username">@catlover</span>
+          <p>Just posted a new photo! Check it out! #meow</p>
+        </div>
+      </div>
+      <div class="post">
+        <div class="avatar">🌟</div>
+        <div class="post-content">
+          <span class="username">@starstruck</span>
+          <p>Who else is up late scrolling? #nightowl</p>
+        </div>
+      </div>
+    </section>
+    <aside class="sidebar">
+      <div class="profile-card">
+        <div class="avatar-large">👤</div>
+        <h3>@you</h3>
+        <p>Welcome to Chattr! Connect, share, and discover.</p>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Dark Pattern Cookie Banner -->
+  <div id="cookie-banner" class="cookie-banner">
+    <div class="cookie-content">
+      <h3>🍪 We use cookies to improve your experience</h3>
+      <p>
+        By clicking <b>Accept All</b>, you agree to our use of cookies for personalization, analytics, and advertising. Some cookies are essential for the site to function. For more info, see our <a href="privacy-policy.html" class="privacy-link">Privacy Policy</a>.
+      </p>
+      <div class="cookie-actions">
+        <button id="accept-cookies" class="btn-primary">Accept All</button>
+        <button id="settings-cookies" class="btn-link">Settings</button>
+        <!-- The reject button is hidden in settings modal -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Cookie Settings Modal (Dark Pattern) -->
+  <div id="cookie-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Cookie Preferences</h3>
+        <button id="close-modal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Some cookies are required for Chattr to work. Others help us improve your experience and show you relevant ads.</p>
+        <div class="cookie-category">
+          <label><input type="checkbox" checked disabled> Essential Cookies (Required)</label>
+        </div>
+        <div class="cookie-category">
+          <label><input type="checkbox" checked> Analytics & Personalization Cookies</label>
+        </div>
+        <div class="cookie-category">
+          <label><input type="checkbox" checked> Marketing & Tracking Cookies</label>
+        </div>
+        <div class="cookie-category">
+          <label><input type="checkbox" checked> Social Media Integration</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="save-preferences" class="btn-primary">Save Preferences</button>
+        <button id="reject-all" class="btn-link subtle">Reject Non-Essential</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html> 

@@ -1,5 +1,13 @@
 console.log('CookiePopupDetector content script loaded on', window.location.href);
 
+// Restrict script to only run on test sites
+if (!/^localhost(:\d+)?$/.test(location.hostname) && !/^127\.0\.0\.1$/.test(location.hostname)) {
+  // Not a test site, do nothing
+  console.log('Not a test site, skipping CookiePopupDetector initialization');
+} else {
+  console.log('Test site detected, will initialize CookiePopupDetector');
+}
+
 class CookiePopupDetector {
     constructor() {
 
@@ -47,7 +55,7 @@ class CookiePopupDetector {
         '[id*="trustarcbar"]',
         '[class*="trustarc"]',
         '[id*="cookiefirst"]',
-        '[class*="cookiefirst"]',
+        '[id*="cookiefirst"]',
         '.cookiealert',
         '.cookie-alert',
         '.cc-banner',
@@ -64,8 +72,8 @@ class CookiePopupDetector {
     init() {
       console.log('🍪 Cookie Banner Detector initialized');
       
-      // Staggered detection to catch banners that load at different times
-      const delays = [0, 1000, 2000, 3000, 5000];
+      // More frequent detection to catch banners that load at different times
+      const delays = [0, 500, 1000, 1500, 2000, 3000, 5000, 8000];
       delays.forEach(delay => {
         setTimeout(() => {
           console.log(`🔍 Scanning for cookie banners (${delay}ms)`);
@@ -264,17 +272,28 @@ class CookiePopupDetector {
       const style = window.getComputedStyle(element);
       const rect = element.getBoundingClientRect();
       
-      return (
-        style.display !== 'none' &&
-        style.visibility !== 'hidden' &&
-        parseFloat(style.opacity) > 0.1 &&
-        rect.width > 0 &&
-        rect.height > 0 &&
-        rect.top < window.innerHeight &&
-        rect.bottom > 0 &&
-        rect.left < window.innerWidth &&
-        rect.right > 0
-      );
+      // Check if element is hidden by CSS
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+        return false;
+      }
+      
+      // Check if element has dimensions
+      if (rect.width === 0 || rect.height === 0) {
+        // Special case: check if it's a cookie banner that might be hidden with transform
+        const text = element.textContent?.toLowerCase() || '';
+        const hasCookieContent = this.cookieKeywords.some(keyword => text.includes(keyword));
+        const hasCookieClass = element.className?.toLowerCase().includes('cookie') || 
+                              element.id?.toLowerCase().includes('cookie');
+        
+        // If it has cookie content or class, check it even if hidden
+        if (hasCookieContent || hasCookieClass) {
+          console.log('Found hidden cookie banner element:', element);
+          return true;
+        }
+        return false;
+      }
+      
+      return true;
     }
   
     processPopup(element, detectionMethod) {
@@ -297,38 +316,44 @@ class CookiePopupDetector {
     extractPopupData(element, detectionMethod) {
       const rect = element.getBoundingClientRect();
       const style = window.getComputedStyle(element);
-      
-      // Extract text content
       const textContent = element.textContent?.trim() || '';
+      const htmlContent = element.innerHTML || '';
       
-      // Extract HTML (limit size)
-      let htmlContent = element.innerHTML;
-      if (htmlContent.length > 5000) {
-        htmlContent = htmlContent.substring(0, 5000) + '... [truncated]';
+      // Extract buttons and their text
+      const buttons = Array.from(element.querySelectorAll('button, input[type="button"], input[type="submit"], .btn, [role="button"]'))
+        .map(btn => ({
+          text: btn.textContent?.trim() || btn.value || '',
+          type: btn.type || 'button',
+          classes: btn.className || '',
+          id: btn.id || ''
+        }))
+        .filter(btn => btn.text.length > 0);
+
+      // Extract privacy policy links
+      const privacyLinks = this.extractPrivacyPolicyLinks(element);
+      
+      // Debug: Log detected privacy links
+      if (privacyLinks.length > 0) {
+        console.log('🔗 Detected privacy links:', privacyLinks.map(link => ({
+          text: link.text,
+          href: link.href,
+          type: link.type,
+          context: link.context
+        })));
+      } else {
+        console.log('ℹ️ No privacy links found in banner');
       }
       
-      // Extract buttons
-      const buttons = Array.from(element.querySelectorAll('button, a[role="button"], input[type="button"], input[type="submit"], [role="button"]'))
-        .map(btn => ({
-          text: btn.textContent?.trim() || '',
-          type: btn.tagName.toLowerCase(),
-          classes: btn.className,
-          id: btn.id,
-          href: btn.href || null
-        }));
-  
-      // Extract policy links
-      const policyLinks = Array.from(element.querySelectorAll('a[href]'))
-        .filter(link => {
-          const text = link.textContent?.toLowerCase() || '';
-          return text.includes('privacy') || text.includes('cookie') || 
-                 text.includes('policy') || text.includes('terms');
-        })
+      // Extract other policy links
+      const policyLinks = Array.from(element.querySelectorAll('a[href*="policy"], a[href*="privacy"], a[href*="terms"], a[href*="cookie"]'))
         .map(link => ({
           text: link.textContent?.trim() || '',
-          href: link.href
-        }));
-  
+          href: link.href || '',
+          classes: link.className || '',
+          id: link.id || ''
+        }))
+        .filter(link => link.href.length > 0);
+
       return {
         id: this.generatePopupId(),
         url: window.location.href,
@@ -339,6 +364,7 @@ class CookiePopupDetector {
         htmlContent,
         buttons,
         policyLinks,
+        privacyLinks,
         position: {
           top: rect.top,
           left: rect.left,
@@ -354,6 +380,231 @@ class CookiePopupDetector {
         classes: element.className,
         elementId: element.id
       };
+    }
+  
+    extractPrivacyPolicyLinks(element) {
+      const privacyLinks = [];
+      
+      // Comprehensive privacy policy link patterns
+      const privacyPatterns = [
+        // Direct privacy policy mentions
+        /privacy\s*policy/i,
+        /privacy\s*notice/i,
+        /privacy\s*statement/i,
+        /data\s*protection/i,
+        /data\s*privacy/i,
+        /gdpr/i,
+        /ccpa/i,
+        /cookie\s*policy/i,
+        /cookie\s*notice/i,
+        /terms\s*of\s*service/i,
+        /terms\s*and\s*conditions/i,
+        /legal\s*notice/i,
+        /legal\s*information/i,
+        
+        // Common action phrases that often link to privacy policies
+        /click\s*here/i,
+        /learn\s*more/i,
+        /read\s*more/i,
+        /find\s*out\s*more/i,
+        /see\s*more/i,
+        /view\s*more/i,
+        /details/i,
+        /more\s*info/i,
+        /more\s*information/i,
+        /full\s*details/i,
+        /complete\s*details/i,
+        /here/i,
+        /this\s*link/i,
+        
+        // Privacy-related action words
+        /manage\s*cookies/i,
+        /cookie\s*settings/i,
+        /privacy\s*settings/i,
+        /consent\s*management/i,
+        /preferences/i,
+        /settings/i,
+        /customize/i,
+        /configure/i,
+        /opt\s*out/i,
+        /opt\s*in/i,
+        
+        // Common button/link text
+        /accept\s*all/i,
+        /reject\s*all/i,
+        /accept\s*selected/i,
+        /save\s*preferences/i,
+        /continue/i,
+        /proceed/i,
+        /ok/i,
+        /got\s*it/i,
+        /understand/i,
+        /agree/i,
+        /disagree/i
+      ];
+
+      // Find all links in the element
+      const links = element.querySelectorAll('a[href]');
+      
+      console.log(`🔍 Checking ${links.length} links for privacy policy detection`);
+      
+      links.forEach(link => {
+        const linkText = link.textContent?.trim() || '';
+        const href = link.href || '';
+        const linkTitle = link.title?.trim() || '';
+        const linkAriaLabel = link.getAttribute('aria-label')?.trim() || '';
+        
+        // Check if link text matches privacy patterns
+        const isPrivacyLink = privacyPatterns.some(pattern => pattern.test(linkText));
+        
+        // Check if href contains privacy-related keywords
+        const hrefContainsPrivacy = /privacy|gdpr|ccpa|cookie|terms|legal|policy|notice|statement/i.test(href);
+        
+        // Check if title or aria-label contains privacy keywords
+        const titleContainsPrivacy = /privacy|gdpr|ccpa|cookie|terms|legal|policy|notice|statement/i.test(linkTitle);
+        const ariaContainsPrivacy = /privacy|gdpr|ccpa|cookie|terms|legal|policy|notice|statement/i.test(linkAriaLabel);
+        
+        // Check surrounding text for privacy context (within 50 characters)
+        const surroundingText = this.getSurroundingText(link, 50);
+        const surroundingContainsPrivacy = /privacy|gdpr|ccpa|cookie|terms|legal|policy|notice|statement/i.test(surroundingText);
+        
+        // Check if this is a generic link (like "click here") but in privacy context
+        const isGenericLink = /click\s*here|here|learn\s*more|read\s*more|more\s*info|details/i.test(linkText);
+        const hasPrivacyContext = surroundingContainsPrivacy || titleContainsPrivacy || ariaContainsPrivacy;
+        
+        // Check if link is in a privacy-related container
+        const isInPrivacyContainer = this.isInPrivacyContainer(link);
+        
+        // Debug: Log link analysis
+        if (linkText.length > 0) {
+          console.log(`🔗 Link analysis: "${linkText}"`, {
+            href: href.substring(0, 50) + (href.length > 50 ? '...' : ''),
+            isPrivacyLink,
+            hrefContainsPrivacy,
+            titleContainsPrivacy,
+            ariaContainsPrivacy,
+            surroundingContainsPrivacy,
+            isGenericLink,
+            hasPrivacyContext,
+            isInPrivacyContainer,
+            surroundingText: surroundingText.substring(0, 30) + (surroundingText.length > 30 ? '...' : '')
+          });
+        }
+        
+        if (isPrivacyLink || hrefContainsPrivacy || titleContainsPrivacy || ariaContainsPrivacy || 
+            (isGenericLink && (hasPrivacyContext || isInPrivacyContainer))) {
+          privacyLinks.push({
+            text: linkText,
+            href: href,
+            title: linkTitle,
+            ariaLabel: linkAriaLabel,
+            type: this.categorizePrivacyLink(linkText, href),
+            classes: link.className || '',
+            id: link.id || '',
+            surroundingText: surroundingText.substring(0, 100),
+            context: {
+              hasPrivacyContext,
+              isInPrivacyContainer,
+              isGenericLink
+            }
+          });
+        }
+      });
+
+      return privacyLinks;
+    }
+    
+    getSurroundingText(element, maxChars = 50) {
+      let text = '';
+      
+      // Get text from parent element
+      const parent = element.parentElement;
+      if (parent) {
+        text += parent.textContent || '';
+      }
+      
+      // Get text from previous and next siblings
+      let prevSibling = element.previousElementSibling;
+      let nextSibling = element.nextElementSibling;
+      
+      if (prevSibling) {
+        text += ' ' + (prevSibling.textContent || '');
+      }
+      
+      if (nextSibling) {
+        text += ' ' + (nextSibling.textContent || '');
+      }
+      
+      return text.substring(0, maxChars);
+    }
+    
+    isInPrivacyContainer(element) {
+      // Check if element is inside a container with privacy-related classes/IDs
+      let current = element.parentElement;
+      const maxDepth = 5; // Don't go too deep
+      let depth = 0;
+      
+      while (current && depth < maxDepth) {
+        const className = current.className?.toLowerCase() || '';
+        const id = current.id?.toLowerCase() || '';
+        const text = current.textContent?.toLowerCase() || '';
+        
+        // Check for privacy-related patterns in container
+        const hasPrivacyClass = /privacy|gdpr|ccpa|cookie|consent|policy|notice|legal/i.test(className);
+        const hasPrivacyId = /privacy|gdpr|ccpa|cookie|consent|policy|notice|legal/i.test(id);
+        const hasPrivacyText = /privacy|gdpr|ccpa|cookie|consent|policy|notice|legal/i.test(text);
+        
+        if (hasPrivacyClass || hasPrivacyId || hasPrivacyText) {
+          return true;
+        }
+        
+        current = current.parentElement;
+        depth++;
+      }
+      
+      return false;
+    }
+  
+    categorizePrivacyLink(text, href) {
+      const lowerText = text.toLowerCase();
+      const lowerHref = href.toLowerCase();
+      
+      // Direct policy links
+      if (/privacy\s*policy/i.test(lowerText) || /privacy\s*policy/i.test(lowerHref)) {
+        return 'privacy_policy';
+      } else if (/cookie\s*policy/i.test(lowerText) || /cookie\s*policy/i.test(lowerHref)) {
+        return 'cookie_policy';
+      } else if (/terms/i.test(lowerText) || /terms/i.test(lowerHref)) {
+        return 'terms_of_service';
+      } else if (/gdpr/i.test(lowerText) || /gdpr/i.test(lowerHref)) {
+        return 'gdpr_info';
+      } else if (/legal/i.test(lowerText) || /legal/i.test(lowerHref)) {
+        return 'legal_notice';
+      }
+      
+      // Action-based links
+      if (/manage\s*cookies|cookie\s*settings|privacy\s*settings|consent\s*management/i.test(lowerText)) {
+        return 'cookie_settings';
+      } else if (/preferences|settings|customize|configure/i.test(lowerText)) {
+        return 'preferences';
+      } else if (/opt\s*out|opt\s*in/i.test(lowerText)) {
+        return 'opt_out_in';
+      }
+      
+      // Generic action links (click here, learn more, etc.)
+      if (/click\s*here|here|learn\s*more|read\s*more|more\s*info|details/i.test(lowerText)) {
+        return 'generic_action';
+      }
+      
+      // Button-style links
+      if (/accept\s*all|reject\s*all|accept\s*selected|save\s*preferences/i.test(lowerText)) {
+        return 'consent_button';
+      } else if (/continue|proceed|ok|got\s*it|understand|agree|disagree/i.test(lowerText)) {
+        return 'action_button';
+      }
+      
+      // Default fallback
+      return 'other_policy';
     }
   
     getElementDescription(element) {
@@ -434,6 +685,11 @@ class CookiePopupDetector {
           
           // Show success notification
           this.showDatabaseNotification('✅ Sent to database!', '#4CAF50');
+          
+          // If privacy links were detected, send them for comprehensive analysis
+          if (popupData.privacyLinks && popupData.privacyLinks.length > 0) {
+            await this.sendPrivacyLinksForAnalysis(popupData.privacyLinks, popupData.domain);
+          }
         } else {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
@@ -445,6 +701,59 @@ class CookiePopupDetector {
         
         // Store failed attempts for retry
         this.storeFailedAttempt(popupData);
+      }
+    }
+  
+    // New function to send privacy policy URLs for comprehensive analysis
+    async sendPrivacyLinksForAnalysis(privacyLinks, domain) {
+      try {
+        // Find the best privacy policy link
+        const privacyPolicyLink = privacyLinks.find(link => 
+          link.type === 'privacy_policy' || link.type === 'cookie_policy'
+        );
+        
+        if (!privacyPolicyLink) {
+          console.log('ℹ️ No suitable privacy policy link found for comprehensive analysis');
+          return;
+        }
+        
+        console.log(`🔍 Sending privacy policy for comprehensive analysis: ${privacyPolicyLink.href}`);
+        
+        const response = await fetch(`${this.API_BASE_URL}/privacy-analysis`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            policyUrl: privacyPolicyLink.href,
+            domain: domain
+          })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ Privacy policy analysis completed:', result.analysis);
+          
+          // Show success notification for privacy analysis
+          this.showDatabaseNotification('🔒 Privacy analysis complete!', '#2196F3');
+          
+          // Send analysis results to popup
+          chrome.runtime.sendMessage({
+            type: 'PRIVACY_ANALYSIS_COMPLETE',
+            data: {
+              domain: domain,
+              analysis: result.analysis,
+              policyUrl: privacyPolicyLink.href
+            }
+          });
+        } else {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+      } catch (error) {
+        console.error('❌ Failed to send privacy policy for analysis:', error);
+        
+        // Show error notification
+        this.showDatabaseNotification('⚠️ Privacy analysis failed', '#FF5722');
       }
     }
   
@@ -579,37 +888,18 @@ class CookiePopupDetector {
       });
     }
   }
-  
-  // Initialize the detector
-  const initDetector = () => {
-    if (document.body) {
-      new CookiePopupDetector();
-    } else {
-      setTimeout(initDetector, 100);
-    }
-  };
-  
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDetector);
-  } else {
-    initDetector();
-  }
 
-// SPA support: re-initialize detector on URL changes
-(function() {
-  let lastUrl = location.href;
-  const observer = new MutationObserver(() => {
-    const url = location.href;
-    if (url !== lastUrl) {
-      lastUrl = url;
-      console.log('SPA navigation detected, re-initializing CookiePopupDetector on', url);
-      // Remove any previous detector state if needed (optional, since each instance is independent)
-      setTimeout(() => {
-        if (document.body) {
-          new CookiePopupDetector();
-        }
-      }, 100);
+  // Initialize the detector only on test sites
+  if (/^localhost(:\d+)?$/.test(location.hostname) || /^127\.0\.0\.1$/.test(location.hostname)) {
+    const initDetector = () => {
+      console.log('Initializing CookiePopupDetector on test site');
+      new CookiePopupDetector();
+    };
+
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initDetector);
+    } else {
+      initDetector();
     }
-  });
-  observer.observe(document, {subtree: true, childList: true});
-})();
+  }

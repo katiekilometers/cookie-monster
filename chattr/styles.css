@@ -1,0 +1,228 @@
+body {
+  font-family: 'Inter', Arial, sans-serif;
+  background: #f3f4f6;
+  color: #222;
+  margin: 0;
+}
+.header {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+}
+.logo {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #3b82f6;
+}
+.nav {
+  display: flex;
+  gap: 2rem;
+}
+.nav-link {
+  color: #64748b;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.nav-link:hover {
+  color: #3b82f6;
+}
+.btn-primary {
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.7rem 1.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(59,130,246,0.08);
+  transition: background 0.2s, transform 0.2s;
+}
+.btn-primary:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+}
+.main-content {
+  display: flex;
+  max-width: 1200px;
+  margin: 2rem auto;
+  gap: 2rem;
+}
+.feed {
+  flex: 2;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 2rem;
+}
+.feed h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.post {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.avatar {
+  font-size: 2rem;
+  background: #e0e7ef;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.post-content {
+  flex: 1;
+}
+.username {
+  font-weight: 600;
+  color: #3b82f6;
+}
+.sidebar {
+  flex: 1;
+}
+.profile-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 2rem;
+  text-align: center;
+}
+.avatar-large {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+/* Cookie Banner (Dark Pattern) */
+.cookie-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-top: 2px solid #e5e7eb;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+  z-index: 1000;
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.3s;
+}
+.cookie-content {
+  max-width: 700px;
+  width: 100%;
+  text-align: left;
+}
+.cookie-banner h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #222;
+}
+.cookie-banner p {
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+.cookie-actions {
+  display: flex;
+  gap: 1rem;
+}
+.btn-link {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: 6px;
+  transition: color 0.2s;
+}
+.btn-link:hover {
+  color: #3b82f6;
+}
+/* Make Accept All very prominent */
+.btn-primary {
+  box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+  font-size: 1.1rem;
+  padding: 0.9rem 2.2rem;
+  font-weight: 700;
+}
+/* Modal (Dark Pattern) */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+.modal.show {
+  display: flex;
+}
+.modal-content {
+  background: #fff;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  overflow: hidden;
+}
+.modal-header {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #64748b;
+  cursor: pointer;
+}
+.modal-body {
+  padding: 1.5rem;
+}
+.cookie-category {
+  margin-bottom: 1rem;
+  color: #64748b;
+  font-size: 1rem;
+}
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+.btn-link.subtle {
+  color: #b91c1c;
+  opacity: 0.5;
+  font-size: 0.95rem;
+  order: 2;
+  margin-left: auto;
+  pointer-events: auto;
+}
+.btn-link.subtle:hover {
+  color: #ef4444;
+  opacity: 1;
+}
+@media (max-width: 900px) {
+  .main-content { flex-direction: column; }
+  .sidebar { margin-top: 2rem; }
+} 

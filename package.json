@@ -1,0 +1,30 @@
+{
+  "name": "cookie-popup-analyzer",
+  "version": "1.0.0",
+  "description": "Cookie Popup Analyzer - Extension, API, and Dashboard",
+  "scripts": {
+    "start": "concurrently \"npm run api\" \"npm run dashboard\"",
+    "api": "cd cookie-banner-api && npm start",
+    "dashboard": "cd dashboard && npm start",
+    "dev": "concurrently \"npm run api:dev\" \"npm run dashboard:dev\"",
+    "api:dev": "cd cookie-banner-api && npm run dev",
+    "dashboard:dev": "cd dashboard && npm run dev",
+    "install:all": "npm install && cd cookie-banner-api && npm install && cd ../dashboard && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "cookie",
+    "privacy",
+    "chrome-extension",
+    "dashboard",
+    "api"
+  ],
+  "author": "Cookie Popup Analyzer Team",
+  "license": "MIT",
+  "dependencies": {
+    "csv-writer": "^1.6.0",
+    "puppeteer": "^24.10.2"
+  }
+}
