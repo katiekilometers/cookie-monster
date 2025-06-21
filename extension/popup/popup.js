@@ -1,9 +1,38 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 Popup initialized');
+    
+    // Debug: Check if tabs exist in DOM
+    const tabsContainer = document.querySelector('.tabs');
+    console.log('📑 Tabs container found:', tabsContainer);
+    
+    const tabs = document.querySelectorAll('.tab');
+    console.log(`📑 Found ${tabs.length} tabs:`, tabs);
+    
+    // Debug: Log each tab's data-tab attribute
+    tabs.forEach((tab, index) => {
+      console.log(`🔗 Tab ${index}:`, {
+        text: tab.textContent,
+        dataTab: tab.getAttribute('data-tab'),
+        classes: tab.className
+      });
+    });
+    
     await loadPopupData();
     document.getElementById('refreshBtn').addEventListener('click', async () => {
       await loadPopupData();
     });
     document.getElementById('clearBtn').addEventListener('click', clearData);
+    
+    // Add tab switching functionality
+    tabs.forEach(tab => {
+      console.log(`🔗 Setting up tab: ${tab.getAttribute('data-tab')}`);
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetTab = tab.getAttribute('data-tab');
+        console.log(`🔄 Switching to tab: ${targetTab}`);
+        switchTab(targetTab);
+      });
+    });
     
     // Add listener for tab changes to update popup data
     chrome.tabs.onActivated.addListener(async () => {
@@ -12,10 +41,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Add listener for tab updates (when URL changes)
     chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-      if (changeInfo.status === 'complete' && tab.active) {
+      if (changeInfo.status === 'complete') {
         await loadPopupData();
       }
     });
+    
+    // Load aggregate data on initialization
+    await loadAggregateData();
     
     // Add listener for popup focus to refresh data
     window.addEventListener('focus', async () => {
@@ -38,6 +70,49 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   });
+  
+  // Tab switching function
+  function switchTab(tabName) {
+    console.log(`🔄 Switching to tab: ${tabName}`);
+    
+    // Update tab buttons
+    const allTabs = document.querySelectorAll('.tab');
+    console.log(`📑 Updating ${allTabs.length} tab buttons`);
+    
+    allTabs.forEach(tab => {
+      tab.classList.remove('active');
+    });
+    
+    const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
+    if (activeTab) {
+      activeTab.classList.add('active');
+      console.log(`✅ Activated tab button: ${tabName}`);
+    } else {
+      console.error(`❌ Tab button not found: ${tabName}`);
+    }
+    
+    // Update tab content
+    const allContents = document.querySelectorAll('.tab-content');
+    console.log(`📄 Updating ${allContents.length} tab contents`);
+    
+    allContents.forEach(content => {
+      content.classList.remove('active');
+    });
+    
+    const activeContent = document.getElementById(`${tabName}Tab`);
+    if (activeContent) {
+      activeContent.classList.add('active');
+      console.log(`✅ Activated tab content: ${tabName}Tab`);
+    } else {
+      console.error(`❌ Tab content not found: ${tabName}Tab`);
+    }
+    
+    // Load aggregate data if switching to aggregate tab
+    if (tabName === 'aggregate') {
+      console.log('📊 Loading aggregate data...');
+      loadAggregateData();
+    }
+  }
   
   async function loadPopupData() {
     try {
@@ -63,6 +138,185 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       console.error('❌ Error loading popup data:', error);
     }
+  }
+  
+  async function loadAggregateData() {
+    try {
+      console.log('📊 Loading aggregate data...');
+      
+      // Fetch all banner data from API
+      const response = await fetch('http://localhost:3000/api/cookie-banners');
+      const data = await response.json();
+      
+      if (!data.success) {
+        console.error('Failed to fetch aggregate data');
+        return;
+      }
+      
+      const banners = data.banners || [];
+      
+      // Get all privacy analysis data from storage
+      const allKeys = await chrome.storage.local.get(null);
+      const privacyKeys = Object.keys(allKeys).filter(key => key.startsWith('privacyAnalysis_'));
+      
+      const scores = [];
+      const gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+      const siteScores = {};
+      
+      // Process privacy analysis data
+      privacyKeys.forEach(key => {
+        const analysis = allKeys[key];
+        if (analysis && analysis.scoreData) {
+          const score = analysis.scoreData.score;
+          const grade = analysis.scoreData.grade;
+          const domain = analysis.domain;
+          
+          scores.push(score);
+          gradeCounts[grade] = (gradeCounts[grade] || 0) + 1;
+          
+          siteScores[domain] = {
+            domain: domain,
+            score: score,
+            grade: grade,
+            bannerCount: banners.filter(b => b.domain === domain).length
+          };
+        }
+      });
+      
+      // Calculate averages and rankings
+      const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+      
+      const siteArray = Object.values(siteScores);
+      const topSites = siteArray
+        .filter(site => site.score >= 70)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5);
+      
+      const lowScores = siteArray
+        .filter(site => site.score < 50)
+        .sort((a, b) => a.score - b.score)
+        .slice(0, 5);
+      
+      const aggregateStats = {
+        totalSites: new Set(banners.map(b => b.domain)).size,
+        totalBanners: banners.length,
+        totalPolicies: banners.filter(b => b.privacyLinks && b.privacyLinks.length > 0).length,
+        avgScore: avgScore,
+        gradeDistribution: gradeCounts,
+        topSites: topSites,
+        lowScores: lowScores
+      };
+      
+      // Display aggregate statistics
+      displayAggregateStats(aggregateStats);
+      
+      // Display grade distribution
+      displayGradeDistribution(aggregateStats.gradeDistribution);
+      
+      // Display top and low performing sites
+      displayTopSites(aggregateStats.topSites);
+      displayLowScores(aggregateStats.lowScores);
+      
+      console.log('✅ Aggregate data loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading aggregate data:', error);
+    }
+  }
+  
+  function calculateAggregateStats(banners) {
+    const domains = new Set();
+    const scores = [];
+    const gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+    const siteScores = {};
+    
+    banners.forEach(banner => {
+      domains.add(banner.domain);
+    });
+    
+    // For now, return basic stats without privacy analysis
+    // Privacy analysis data will be loaded asynchronously
+    return {
+      totalSites: domains.size,
+      totalBanners: banners.length,
+      totalPolicies: banners.filter(b => b.privacyLinks && b.privacyLinks.length > 0).length,
+      avgScore: 0,
+      gradeDistribution: gradeCounts,
+      topSites: [],
+      lowScores: []
+    };
+  }
+  
+  function displayAggregateStats(stats) {
+    document.getElementById('totalSites').textContent = stats.totalSites;
+    document.getElementById('totalBanners').textContent = stats.totalBanners;
+    document.getElementById('totalPolicies').textContent = stats.totalPolicies;
+    document.getElementById('avgScore').textContent = stats.avgScore > 0 ? `${stats.avgScore}/100` : '-';
+  }
+  
+  function displayGradeDistribution(gradeDistribution) {
+    const container = document.getElementById('gradeDistribution');
+    container.innerHTML = '';
+    
+    const grades = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const colors = {
+      'A': '#10b981',
+      'B': '#3b82f6', 
+      'C': '#f59e0b',
+      'D': '#f97316',
+      'E': '#ef4444',
+      'F': '#dc2626'
+    };
+    
+    grades.forEach(grade => {
+      const count = gradeDistribution[grade] || 0;
+      const bar = document.createElement('div');
+      bar.className = 'grade-bar';
+      bar.style.backgroundColor = `${colors[grade]}20`;
+      bar.style.color = colors[grade];
+      bar.style.border = `1px solid ${colors[grade]}40`;
+      bar.textContent = count;
+      container.appendChild(bar);
+    });
+  }
+  
+  function displayTopSites(topSites) {
+    const container = document.getElementById('topSites');
+    container.innerHTML = '';
+    
+    if (topSites.length === 0) {
+      container.innerHTML = '<div style="text-align: center; color: #94a3b8; font-style: italic; padding: 20px;">No high-performing sites yet</div>';
+      return;
+    }
+    
+    topSites.forEach(site => {
+      const item = document.createElement('div');
+      item.className = 'site-item';
+      item.innerHTML = `
+        <div class="site-domain">${site.domain}</div>
+        <div class="site-score grade-${site.grade.toLowerCase()}">${site.score}/100</div>
+      `;
+      container.appendChild(item);
+    });
+  }
+  
+  function displayLowScores(lowScores) {
+    const container = document.getElementById('lowScores');
+    container.innerHTML = '';
+    
+    if (lowScores.length === 0) {
+      container.innerHTML = '<div style="text-align: center; color: #94a3b8; font-style: italic; padding: 20px;">No low-scoring sites found</div>';
+      return;
+    }
+    
+    lowScores.forEach(site => {
+      const item = document.createElement('div');
+      item.className = 'site-item';
+      item.innerHTML = `
+        <div class="site-domain">${site.domain}</div>
+        <div class="site-score grade-${site.grade.toLowerCase()}">${site.score}/100</div>
+      `;
+      container.appendChild(item);
+    });
   }
   
   async function displayStats(popups) {

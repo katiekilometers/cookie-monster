@@ -42,6 +42,52 @@
       margin: 0;
       font-family: 'Montserrat', 'Inter', Roboto, Arial, sans-serif;
     }
+    
+    /* Tab Styles */
+    .tabs {
+      display: flex;
+      margin: 16px 18px 0 18px;
+      background: rgba(30, 41, 59, 0.4);
+      border-radius: 12px;
+      padding: 4px;
+      border: 1px solid rgba(168,85,247,0.2);
+      position: relative;
+      z-index: 10;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px 16px;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 8px;
+      font-size: 0.9em;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      color: #94a3b8;
+      background: transparent;
+      border: none;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tab.active {
+      background: rgba(168,85,247,0.3);
+      color: #f3f6fa;
+      box-shadow: 0 2px 8px rgba(168,85,247,0.2);
+    }
+    .tab:hover:not(.active) {
+      background: rgba(168,85,247,0.1);
+      color: #cbd5e1;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    
     .stats {
       display: flex;
       gap: 16px;
@@ -73,6 +119,91 @@
       font-weight: 600;
       color: #f3f6fa;
     }
+    
+    /* Aggregate Data Styles */
+    .aggregate-stats {
+      margin: 16px 18px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .aggregate-stat {
+      background: rgba(124, 58, 237, 0.35);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      border: 1px solid rgba(168,85,247,0.25);
+    }
+    .aggregate-stat-icon {
+      font-size: 1.5em;
+      margin-bottom: 8px;
+    }
+    .aggregate-stat-value {
+      font-size: 1.4em;
+      font-weight: 700;
+      color: #f3f6fa;
+      margin-bottom: 4px;
+    }
+    .aggregate-stat-label {
+      font-size: 0.8em;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+    
+    .aggregate-section {
+      margin: 16px 18px;
+      background: rgba(124, 58, 237, 0.35);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid rgba(168,85,247,0.25);
+    }
+    .aggregate-section h3 {
+      margin: 0 0 12px 0;
+      color: #e3e8ff;
+      font-size: 1.1em;
+      font-weight: 600;
+    }
+    
+    .site-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .site-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      margin: 4px 0;
+      background: rgba(30, 41, 59, 0.4);
+      border-radius: 8px;
+      border: 1px solid rgba(168,85,247,0.15);
+    }
+    .site-domain {
+      font-size: 0.85em;
+      color: #e2e8f0;
+      font-weight: 500;
+    }
+    .site-score {
+      font-size: 0.9em;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    
+    .grade-distribution {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .grade-bar {
+      flex: 1;
+      text-align: center;
+      padding: 8px 4px;
+      border-radius: 6px;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+    
     #popupsList {
       margin: 0 18px 0 18px;
     }
@@ -409,38 +540,94 @@
       <div class="header-title">Privacy Policy Analyzer</div>
     </div>
 
-    <div id="privacySection" class="privacy-section" style="display: none;">
-      <h3 id="privacyHeader">🔒 Privacy Policy Analysis</h3>
-      <div id="claudeSummary" class="claude-summary" style="display: none;">
-        <h4>🤖 Claude's Summary</h4>
-        <div id="summaryContent" class="summary-content"></div>
-        <button id="refreshAnalysisBtn" class="analyze-btn" style="margin-top: 8px;">🔄 Refresh Analysis</button>
-      </div>
-      <div id="privacyScore" class="privacy-score" style="display: none;">
-        <h4>📊 Privacy Score</h4>
-        <div id="scoreContent" class="score-content">
-          <div id="scoreGrade" class="score-grade" style="display: none;"></div>
-          <button id="scoreBtn" class="score-btn">Score Privacy Policy</button>
-          <button id="detailedAnalysisBtn" class="detailed-analysis-btn" style="display: none;">📋 See Detailed Analysis</button>
-        </div>
-      </div>
-      <div id="privacyLinks" class="privacy-links" style="display: none;">
-        <h4>📄 Privacy Policy Links</h4>
-        <div id="linksContainer" class="links-container"></div>
-      </div>
-      <div id="privacyContent" class="privacy-content" style="display: none;"></div>
+    <!-- Tab Navigation -->
+    <div class="tabs">
+      <button class="tab active" data-tab="current">Current Site</button>
+      <button class="tab" data-tab="aggregate">Aggregate Data</button>
     </div>
 
-    <div class="stats">
-      <div class="stat-card">
-        <div class="stat-icon">📊</div>
-        <div class="stat-value" id="privacyScoreValue">-</div>
-        <div class="stat-label">Privacy Score</div>
+    <!-- Current Site Tab -->
+    <div id="currentTab" class="tab-content active">
+      <div id="privacySection" class="privacy-section" style="display: none;">
+        <h3 id="privacyHeader">🔒 Privacy Policy Analysis</h3>
+        <div id="claudeSummary" class="claude-summary" style="display: none;">
+          <h4>🤖 Claude's Summary</h4>
+          <div id="summaryContent" class="summary-content"></div>
+          <button id="refreshAnalysisBtn" class="analyze-btn" style="margin-top: 8px;">🔄 Refresh Analysis</button>
+        </div>
+        <div id="privacyScore" class="privacy-score" style="display: none;">
+          <h4>📊 Privacy Score</h4>
+          <div id="scoreContent" class="score-content">
+            <div id="scoreGrade" class="score-grade" style="display: none;"></div>
+            <button id="scoreBtn" class="score-btn">Score Privacy Policy</button>
+            <button id="detailedAnalysisBtn" class="detailed-analysis-btn" style="display: none;">📋 See Detailed Analysis</button>
+          </div>
+        </div>
+        <div id="privacyLinks" class="privacy-links" style="display: none;">
+          <h4>📄 Privacy Policy Links</h4>
+          <div id="linksContainer" class="links-container"></div>
+        </div>
+        <div id="privacyContent" class="privacy-content" style="display: none;"></div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon">🔗</div>
-        <div class="stat-value" id="policyCount">0</div>
-        <div class="stat-label">Policies</div>
+
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-value" id="privacyScoreValue">-</div>
+          <div class="stat-label">Privacy Score</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔗</div>
+          <div class="stat-value" id="policyCount">0</div>
+          <div class="stat-label">Policies</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aggregate Data Tab -->
+    <div id="aggregateTab" class="tab-content">
+      <div class="aggregate-stats">
+        <div class="aggregate-stat">
+          <div class="aggregate-stat-icon">🌐</div>
+          <div class="aggregate-stat-value" id="totalSites">0</div>
+          <div class="aggregate-stat-label">Sites Analyzed</div>
+        </div>
+        <div class="aggregate-stat">
+          <div class="aggregate-stat-icon">📊</div>
+          <div class="aggregate-stat-value" id="avgScore">-</div>
+          <div class="aggregate-stat-label">Avg Score</div>
+        </div>
+        <div class="aggregate-stat">
+          <div class="aggregate-stat-icon">🍪</div>
+          <div class="aggregate-stat-value" id="totalBanners">0</div>
+          <div class="aggregate-stat-label">Banners Found</div>
+        </div>
+        <div class="aggregate-stat">
+          <div class="aggregate-stat-icon">📄</div>
+          <div class="aggregate-stat-value" id="totalPolicies">0</div>
+          <div class="aggregate-stat-label">Policies</div>
+        </div>
+      </div>
+
+      <div class="aggregate-section">
+        <h3>📈 Grade Distribution</h3>
+        <div class="grade-distribution" id="gradeDistribution">
+          <!-- Grade bars will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <div class="aggregate-section">
+        <h3>🏆 Top Performing Sites</h3>
+        <div class="site-list" id="topSites">
+          <!-- Top sites will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <div class="aggregate-section">
+        <h3>⚠️ Sites Needing Attention</h3>
+        <div class="site-list" id="lowScores">
+          <!-- Low scoring sites will be populated by JavaScript -->
+        </div>
       </div>
     </div>
 
