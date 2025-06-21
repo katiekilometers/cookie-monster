@@ -1,22 +1,123 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Cookie Analyzer Dashboard</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cookie Popup Analyzer Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>Cookie Pattern Analysis Dashboard</h1>
-    
-    <div id="stats" class="stats-container">
-      <!-- Stats component renders here -->
-    </div>
-    
-    <div id="site-list" class="site-list">
-      <!-- Site list component renders here -->
+  <div class="dashboard-container">
+    <!-- Header -->
+    <header class="dashboard-header">
+      <div class="header-content">
+        <div class="header-logo">
+          <img src="../extension/icons/icon.png" alt="Logo" width="40" height="40">
+        </div>
+        <div class="header-title">
+          <h1>Cookie Popup Analyzer Dashboard</h1>
+          <p>Comprehensive Privacy Analysis & Tracking Insights</p>
+        </div>
+        <div class="header-actions">
+          <button id="refreshBtn" class="refresh-btn">🔄 Refresh Data</button>
+          <button id="exportBtn" class="export-btn">📊 Export Report</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+      <!-- Overview Stats -->
+      <section class="overview-section">
+        <h2>Overview</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">🍪</div>
+            <div class="stat-value" id="totalPopups">0</div>
+            <div class="stat-label">Total Cookie Banners</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🌐</div>
+            <div class="stat-value" id="uniqueDomains">0</div>
+            <div class="stat-label">Unique Domains</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-value" id="highRiskSites">0</div>
+            <div class="stat-label">High Risk Sites</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📈</div>
+            <div class="stat-value" id="avgPrivacyScore">0</div>
+            <div class="stat-label">Avg Privacy Score</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Charts Section -->
+      <section class="charts-section">
+        <div class="chart-container">
+          <h3>Privacy Score Distribution</h3>
+          <canvas id="privacyChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3>Detection Timeline</h3>
+          <canvas id="timelineChart"></canvas>
+        </div>
+      </section>
+
+      <!-- Detailed Analytics -->
+      <section class="analytics-section">
+        <h2>Detailed Analytics</h2>
+        <div class="analytics-grid">
+          <div class="analytics-card">
+            <h3>Top Tracking Domains</h3>
+            <div id="topDomains" class="domain-list"></div>
+          </div>
+          <div class="analytics-card">
+            <h3>Privacy Grade Breakdown</h3>
+            <div id="privacyGrades" class="grade-breakdown"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recent Detections -->
+      <section class="recent-section">
+        <h2>Recent Detections</h2>
+        <div class="filters">
+          <select id="domainFilter" class="filter-select">
+            <option value="">All Domains</option>
+          </select>
+          <select id="gradeFilter" class="filter-select">
+            <option value="">All Grades</option>
+            <option value="A">Grade A</option>
+            <option value="B">Grade B</option>
+            <option value="C">Grade C</option>
+            <option value="D">Grade D</option>
+            <option value="F">Grade F</option>
+          </select>
+          <input type="text" id="searchInput" placeholder="Search domains..." class="search-input">
+        </div>
+        <div id="recentDetections" class="detections-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal for detailed analysis -->
+  <div id="analysisModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Domain Analysis</h3>
+        <button class="close-btn" id="closeModal">&times;</button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
     </div>
   </div>
-  
+
   <script type="module" src="app.js"></script>
 </body>
 </html>
