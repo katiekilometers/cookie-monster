@@ -354,10 +354,15 @@ class CookiePopupDetector {
         }))
         .filter(link => link.href.length > 0);
 
+      // Include port in domain for localhost to distinguish between test sites
+      const domain = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? `${window.location.hostname}:${window.location.port}`
+        : window.location.hostname;
+
       return {
         id: this.generatePopupId(),
         url: window.location.href,
-        domain: window.location.hostname,
+        domain: domain,
         timestamp: new Date().toISOString(),
         detectionMethod,
         textContent,
@@ -678,82 +683,35 @@ class CookiePopupDetector {
           },
           body: JSON.stringify(popupData)
         });
-  
+
         if (response.ok) {
           const result = await response.json();
-          console.log('🗄️ Data sent to database successfully:', result.bannerId);
+          console.log('✅ Cookie banner data sent to database:', result);
           
           // Show success notification
-          this.showDatabaseNotification('✅ Sent to database!', '#4CAF50');
+          this.showDatabaseNotification('✅ Data saved!', '#4CAF50');
           
-          // If privacy links were detected, send them for comprehensive analysis
-          if (popupData.privacyLinks && popupData.privacyLinks.length > 0) {
-            await this.sendPrivacyLinksForAnalysis(popupData.privacyLinks, popupData.domain);
-          }
+          // Store in local storage for popup
+          const result2 = await chrome.storage.local.get(['cookiePopups']);
+          const popups = result2.cookiePopups || [];
+          
+          popups.push({
+            domain: popupData.domain,
+            timestamp: popupData.timestamp,
+            analysis_text: result.analysis?.banner ? JSON.stringify(result.analysis.banner) : null
+          });
+          
+          await chrome.storage.local.set({ cookiePopups: popups });
+          
         } else {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
       } catch (error) {
-        console.error('❌ Failed to send to database:', error);
-        
-        // Show error notification
+        console.error('❌ Failed to send data to database:', error);
         this.showDatabaseNotification('⚠️ Database unavailable', '#FF9800');
         
         // Store failed attempts for retry
         this.storeFailedAttempt(popupData);
-      }
-    }
-  
-    // New function to send privacy policy URLs for comprehensive analysis
-    async sendPrivacyLinksForAnalysis(privacyLinks, domain) {
-      try {
-        // Find the best privacy policy link
-        const privacyPolicyLink = privacyLinks.find(link => 
-          link.type === 'privacy_policy' || link.type === 'cookie_policy'
-        );
-        
-        if (!privacyPolicyLink) {
-          console.log('ℹ️ No suitable privacy policy link found for comprehensive analysis');
-          return;
-        }
-        
-        console.log(`🔍 Sending privacy policy for comprehensive analysis: ${privacyPolicyLink.href}`);
-        
-        const response = await fetch(`${this.API_BASE_URL}/privacy-analysis`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            policyUrl: privacyPolicyLink.href,
-            domain: domain
-          })
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log('✅ Privacy policy analysis completed:', result.analysis);
-          
-          // Show success notification for privacy analysis
-          this.showDatabaseNotification('🔒 Privacy analysis complete!', '#2196F3');
-          
-          // Send analysis results to popup
-          chrome.runtime.sendMessage({
-            type: 'PRIVACY_ANALYSIS_COMPLETE',
-            data: {
-              domain: domain,
-              analysis: result.analysis,
-              policyUrl: privacyPolicyLink.href
-            }
-          });
-        } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-      } catch (error) {
-        console.error('❌ Failed to send privacy policy for analysis:', error);
-        
-        // Show error notification
-        this.showDatabaseNotification('⚠️ Privacy analysis failed', '#FF5722');
       }
     }
   
@@ -808,11 +766,10 @@ class CookiePopupDetector {
     }
     
     highlightPopup(element) {
-      // Add a persistent glowy box effect around the detected cookie popup element
-      element.style.border = '3px solid #7f9cf5';
-      element.style.boxShadow = '0 0 32px 8px #7f9cf5cc, 0 0 0 2px #232946';
-      element.style.background = 'linear-gradient(135deg, rgba(44,62,80,0.85) 0%, rgba(95,75,182,0.85) 100%)';
-      element.style.backdropFilter = 'blur(8px)';
+      // Add only a glow border effect around the detected cookie popup element
+      element.style.border = '2px solid #a259ff';
+      element.style.boxShadow = '0 0 16px 4px #a259ff, 0 0 32px 8px #5df2d6';
+      element.style.borderRadius = '12px';
       element.style.zIndex = '2147483647';
     }
   

@@ -289,3 +289,6 @@
   color: #a7f3d0;
   font-style: italic;
 }
+
+/* Remove the cookie popup banner styling completely - only keep the glow border effect */
+/* The glow border is applied directly in the content script */

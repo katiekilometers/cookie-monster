@@ -73,95 +73,75 @@
       font-weight: 600;
       color: #f3f6fa;
     }
-    #domainAnalysis {
-      margin: 18px 18px 0 18px;
-    }
-    .popup-analysis {
-      background: rgba(124, 58, 237, 0.65);
-      border-radius: 14px;
-      box-shadow: 0 2px 8px rgba(168,85,247,0.25);
-      padding: 16px 18px 10px 18px;
-      margin-bottom: 18px;
-      backdrop-filter: blur(2px);
-      border: 1.5px solid #a855f7;
-    }
-    .popup-analysis strong {
-      color: #10b981;
-      font-weight: 600;
-    }
-    .popup-analysis ul {
-      margin: 8px 0 0 0;
-      padding-left: 18px;
-    }
-    .popup-analysis li {
-      font-size: 13px;
-      margin-bottom: 4px;
-      color: #f3f6fa;
-    }
     #popupsList {
       margin: 0 18px 0 18px;
     }
-    .popup-item {
-      background: rgba(124, 58, 237, 0.85);
+    .privacy-section {
+      margin: 18px;
+      background: rgba(124, 58, 237, 0.35);
       border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(168,85,247,0.25);
-      padding: 14px 16px 10px 16px;
-      margin-bottom: 14px;
-      font-size: 13px;
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      position: relative;
-      transition: box-shadow 0.3s, border 0.3s;
+      padding: 16px;
+      border: 1px solid rgba(168,85,247,0.25);
     }
-    .popup-item.glowy {
-      border: 2.5px solid #10b981;
-      box-shadow: 0 0 24px 6px #10b981cc, 0 0 0 2px #0f0517;
-      background: linear-gradient(135deg, rgba(124,58,237,0.85) 0%, rgba(16,185,129,0.85) 100%);
-      backdrop-filter: blur(8px);
-      z-index: 10;
-    }
-    .popup-favicon {
-      width: 20px;
-      height: 20px;
-      border-radius: 4px;
-      margin-top: 2px;
-      background: #fff;
-      box-shadow: 0 1px 4px rgba(44, 62, 80, 0.10);
-    }
-    .popup-domain {
+    .privacy-section h3 {
+      margin: 0 0 12px 0;
+      color: #e3e8ff;
+      font-size: 1.1em;
       font-weight: 600;
-      color: #10b981;
-      font-size: 1em;
-      margin-bottom: 2px;
     }
-    .popup-text {
-      margin-top: 2px;
-      color: #6ee7b7;
-      max-height: 60px;
-      overflow: hidden;
+    .privacy-links {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(59,130,246,0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(59,130,246,0.2);
     }
-    .popup-time {
-      font-size: 10px;
-      color: #34d399;
-      margin-top: 5px;
+    .privacy-links h4 {
+      margin: 0 0 8px 0;
+      color: #3b82f6;
+      font-size: 0.95em;
+      font-weight: 600;
     }
-    .privacy-score-badge {
-      display: inline-block;
-      font-size: 1em;
-      font-weight: 700;
-      padding: 4px 14px;
-      border-radius: 16px;
-      margin-left: 8px;
-      margin-bottom: 2px;
-      background: #7c3aed;
-      color: #fff;
-      box-shadow: 0 1px 6px #0f051722;
-      transition: background 0.2s, color 0.2s;
+    .links-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
-    .privacy-score-badge.red { background: linear-gradient(90deg, #db4437 0%, #ff7e5f 100%); color: #fff; }
-    .privacy-score-badge.amber { background: linear-gradient(90deg, #ffb300 0%, #ff7e5f 100%); color: #232946; }
-    .privacy-score-badge.green { background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%); color: #232946; }
+    .policy-link {
+      background: rgba(59,130,246,0.15);
+      color: #3b82f6;
+      padding: 8px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.85em;
+      cursor: pointer;
+      border: 1px solid rgba(59,130,246,0.2);
+      transition: all 0.2s ease;
+    }
+    .policy-link:hover {
+      background: rgba(59,130,246,0.25);
+      transform: translateY(-1px);
+    }
+    .privacy-content {
+      max-height: 200px;
+      overflow-y: auto;
+      background: rgba(36,44,80,0.35);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.85em;
+      line-height: 1.4;
+      color: #bfc9e6;
+      border: 1px solid rgba(168,85,247,0.15);
+    }
+    .privacy-content.loading {
+      text-align: center;
+      color: #888;
+      font-style: italic;
+    }
+    .privacy-content.error {
+      color: #ef4444;
+      text-align: center;
+    }
     .controls {
       text-align: center;
       margin: 18px 0 0 0;
@@ -206,6 +186,218 @@
       flex-direction: column;
       overflow: hidden;
     }
+    .claude-summary {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(16,185,129,0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(16,185,129,0.2);
+    }
+    .claude-summary h4 {
+      margin: 0 0 8px 0;
+      color: #10b981;
+      font-size: 0.95em;
+      font-weight: 600;
+    }
+    .summary-content {
+      font-size: 0.85em;
+      line-height: 1.4;
+      color: #bfc9e6;
+      margin-bottom: 12px;
+      padding: 8px;
+      background: rgba(36,44,80,0.35);
+      border-radius: 6px;
+      border: 1px solid rgba(16,185,129,0.15);
+    }
+    .analyze-btn {
+      background: #10b981;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8em;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .analyze-btn:hover {
+      background: #059669;
+    }
+    .analyze-btn:disabled {
+      background: #6b7280;
+      cursor: not-allowed;
+    }
+    
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+    }
+    .modal-content {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      margin: 5% auto;
+      padding: 0;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      border: 1px solid rgba(59,130,246,0.2);
+      overflow: hidden;
+    }
+    .modal-header {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(59,130,246,0.2);
+    }
+    .modal-header h3 {
+      margin: 0;
+      color: white;
+      font-size: 1.1em;
+      font-weight: 600;
+    }
+    .close-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+    .close-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: scale(1.1);
+    }
+    .modal-body {
+      padding: 20px;
+      max-height: 60vh;
+      overflow-y: auto;
+      color: #bfc9e6;
+      font-size: 0.9em;
+      line-height: 1.5;
+    }
+    .modal-body::-webkit-scrollbar {
+      width: 8px;
+    }
+    .modal-body::-webkit-scrollbar-track {
+      background: rgba(30,41,59,0.5);
+      border-radius: 4px;
+    }
+    .modal-body::-webkit-scrollbar-thumb {
+      background: rgba(59,130,246,0.3);
+      border-radius: 4px;
+    }
+    .modal-body::-webkit-scrollbar-thumb:hover {
+      background: rgba(59,130,246,0.5);
+    }
+    .privacy-score {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(30, 41, 59, 0.6);
+      border-radius: 8px;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    .privacy-score h4 {
+      margin: 0 0 8px 0;
+      color: #e2e8f0;
+      font-size: 0.95em;
+      font-weight: 600;
+    }
+    .score-content {
+      font-size: 0.85em;
+      line-height: 1.4;
+      color: #cbd5e1;
+    }
+    .score-btn {
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8em;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .score-btn:hover {
+      background: #2563eb;
+    }
+    .score-btn:disabled {
+      background: #6b7280;
+      cursor: not-allowed;
+    }
+    .score-result {
+      margin-top: 12px;
+      padding: 10px;
+      background: rgba(30, 41, 59, 0.8);
+      border-radius: 6px;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    .score-grade {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-bottom: 8px;
+      text-align: center;
+      padding: 8px;
+      border-radius: 6px;
+      background: rgba(59, 130, 246, 0.1);
+    }
+    .score-breakdown {
+      font-size: 0.8em;
+      margin-top: 8px;
+      display: none;
+    }
+    .score-breakdown.show {
+      display: block;
+    }
+    .score-breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+    }
+    .score-breakdown-item:last-child {
+      border-bottom: none;
+    }
+    .detailed-analysis-btn {
+      background: #10b981;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8em;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      margin-top: 8px;
+      width: 100%;
+    }
+    .detailed-analysis-btn:hover {
+      background: #059669;
+    }
+    .grade-a { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+    .grade-b { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+    .grade-c { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+    .grade-d { color: #f97316; background: rgba(249, 115, 22, 0.1); }
+    .grade-e { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+    .grade-f { color: #dc2626; background: rgba(220, 38, 38, 0.1); }
   </style>
 </head>
 <body>
@@ -214,25 +406,56 @@
       <div class="header-logo">
         <img src="../icons/icon.png" alt="Logo" width="32" height="32" />
       </div>
-      <div class="header-title">Cookie Popup Analyzer</div>
+      <div class="header-title">Privacy Policy Analyzer</div>
+    </div>
+
+    <div id="privacySection" class="privacy-section" style="display: none;">
+      <h3 id="privacyHeader">🔒 Privacy Policy Analysis</h3>
+      <div id="claudeSummary" class="claude-summary" style="display: none;">
+        <h4>🤖 Claude's Summary</h4>
+        <div id="summaryContent" class="summary-content"></div>
+        <button id="refreshAnalysisBtn" class="analyze-btn" style="margin-top: 8px;">🔄 Refresh Analysis</button>
+      </div>
+      <div id="privacyScore" class="privacy-score" style="display: none;">
+        <h4>📊 Privacy Score</h4>
+        <div id="scoreContent" class="score-content">
+          <div id="scoreGrade" class="score-grade" style="display: none;"></div>
+          <button id="scoreBtn" class="score-btn">Score Privacy Policy</button>
+          <button id="detailedAnalysisBtn" class="detailed-analysis-btn" style="display: none;">📋 See Detailed Analysis</button>
+        </div>
+      </div>
+      <div id="privacyLinks" class="privacy-links" style="display: none;">
+        <h4>📄 Privacy Policy Links</h4>
+        <div id="linksContainer" class="links-container"></div>
+      </div>
+      <div id="privacyContent" class="privacy-content" style="display: none;"></div>
     </div>
 
     <div class="stats">
       <div class="stat-card">
-        <div class="stat-icon">🍪</div>
-        <div class="stat-value" id="totalCount">0</div>
-        <div class="stat-label">Total Popups</div>
+        <div class="stat-icon">📊</div>
+        <div class="stat-value" id="privacyScoreValue">-</div>
+        <div class="stat-label">Privacy Score</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">🌐</div>
-        <div class="stat-value" id="domainCount">0</div>
-        <div class="stat-label">Unique Domains</div>
+        <div class="stat-icon">🔗</div>
+        <div class="stat-value" id="policyCount">0</div>
+        <div class="stat-label">Policies</div>
       </div>
     </div>
 
-    <div id="domainAnalysis"></div>
-
-    <div id="popupsList"></div>
+    <!-- Privacy Policy Modal -->
+    <div id="privacyModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>📄 Privacy Policy</h3>
+          <button id="closeModal" class="close-btn">&times;</button>
+        </div>
+        <div id="modalContent" class="modal-body">
+          <div style="text-align: center; padding: 20px;">Loading privacy policy...</div>
+        </div>
+      </div>
+    </div>
 
     <div class="controls">
       <button id="refreshBtn">Refresh</button>
